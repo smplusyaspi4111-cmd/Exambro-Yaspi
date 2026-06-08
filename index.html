@@ -25,9 +25,6 @@
     .mapel-info h4 { font-size: 14px; color: #1e293b; text-transform: uppercase; }
     .mapel-info p { font-size: 12px; color: #64748b; margin-top: 2px; }
     .btn-mulai { padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
-    
-    /* Loading status */
-    #status-loading { color: #3b82f6; font-size: 14px; margin: 15px 0; display: none; }
 
     /* 🚨 TIRAI MERAH PENGUNCI */
     #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #b91c1c; color: white; z-index: 10000; padding: 20% 20px 0 20px; text-align: center; box-sizing: border-box; }
@@ -39,8 +36,8 @@
 <body>
 
 <div id="blocker">
-  <h1 id="lock-title">⚠️ AKURASI UJIAN TERKUNCI</h1>
-  <p id="lock-desc">Terdeteksi keluar dari Google Form ujian untuk membuka aplikasi lain!</p>
+  <h1>⚠️ AKURASI UJIAN TERKUNCI</h1>
+  <p>Terdeteksi keluar dari Google Form ujian untuk membuka aplikasi lain!</p>
   <p style="font-weight: bold; background: rgba(0,0,0,0.2); display: inline-block; padding: 6px 15px; border-radius: 6px; margin-top: 15px;" id="lock-count">
     Pelanggaran Ke: 0
   </p>
@@ -58,66 +55,64 @@
     <button class="btn-kelas" onclick="pilihKelas('8', this)">KELAS VIII (8)</button>
   </div>
 
-  <div id="status-loading">Sedang mengambil data roster ujian terbaru...</div>
-
   <div id="roster-container"></div>
 </div>
 
 <script>
-// Link Spreadsheet Bersih dari file kamu
-const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGbMDc0aFb9CxkugUbfbVkcliIfnxNc/edit";
+// 📋 DATA ROSTER LANGSUNG DI DALAM KODE (Silakan ganti teks 'LINK_FORM_SOAL' dengan link G-Form aslimu)
+const databaseRoster = [
+  // --- HARI SENIN ---
+  { hari: "Senin", mapel: "IPA - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Senin", mapel: "BAHASA INDONESIA - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Senin", mapel: "BAHASA INDONESIA - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Senin", mapel: "MATEMATIKA - Kelas 8", link: "LINK_FORM_SOAL" },
+  
+  // --- HARI SELASA ---
+  { hari: "Selasa", mapel: "MATEMATIKA - Kelas 7", link: "https://forms.gle/oEyXTy8naqoB6mqVA" }, // Link Matematika 7 punyamu yang sudah ada
+  { hari: "Selasa", mapel: "PEND. AGAMA ISLAM - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Selasa", mapel: "PEND. AGAMA ISLAM - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Selasa", mapel: "PKN - Kelas 8", link: "LINK_FORM_SOAL" },
+  
+  // --- HARI RABU ---
+  { hari: "Rabu", mapel: "PKN - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Rabu", mapel: "FIQIH IBADAH - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Rabu", mapel: "FIQIH IBADAH - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Rabu", mapel: "INFORMATIKA - Kelas 8", link: "LINK_FORM_SOAL" },
+  
+  // --- HARI KAMIS ---
+  { hari: "Kamis", mapel: "BAHASA INGGRIS - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Kamis", mapel: "INFORMATIKA - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Kamis", mapel: "IPS - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Kamis", mapel: "SENI - Kelas 8", link: "LINK_FORM_SOAL" },
+  
+  // --- HARI JUMAT ---
+  { hari: "Jumat", mapel: "IPS - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Jumat", mapel: "PENJASORKES - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Jumat", mapel: "PENJASORKES - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Jumat", mapel: "IPA - Kelas 8", link: "LINK_FORM_SOAL" },
+  
+  // --- HARI SABTU ---
+  { hari: "Sabtu", mapel: "SENI - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Sabtu", mapel: "BAHASA INGGRIS - Kelas 7", link: "LINK_FORM_SOAL" },
+  { hari: "Sabtu", mapel: "BAHASA INGGRIS - Kelas 8", link: "LINK_FORM_SOAL" }
+];
 
-let databaseRoster = [];
-let databaseSandi = {};
+// 🔑 DAFTAR PIN PENGAWAS LANGSUNG
+const databaseSandi = {
+  "1": "YASPIAMAN",
+  "2": "JANGANCONTEK",
+  "3": "LALUIPENGAWAS",
+  "4": "JUJURLEBIHBAIK",
+  "5": "PINFINAL2026"
+};
+
 let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
 
 window.onload = function() {
   if (localStorage.getItem("yaspi_portal_locked") === "true") {
     kunciPortalSiswa();
-  } else {
-    muatDataDariSpreadsheet();
   }
 };
-
-function muatDataDariSpreadsheet() {
-  document.getElementById("status-loading").style.display = "block";
-  
-  const urlRoster = SPREADSHEET_URL.split("/edit")[0] + '/gviz/tq?tqx=out:csv&sheet=roster';
-  const urlSandi = SPREADSHEET_URL.split("/edit")[0] + '/gviz/tq?tqx=out:csv&sheet=sandi';
-
-  // Ambil Database Sandi
-  fetch(urlSandi).then(res => res.text()).then(data => {
-    let baris = data.split("\n");
-    for(let i=1; i<baris.length; i++) {
-      let kolom = baris[i].split(",");
-      if(kolom.length >= 2) {
-        let noPelanggaran = kolom[0].replace(/"/g, '').trim();
-        let pinCode = kolom[1].replace(/"/g, '').trim().toUpperCase();
-        databaseSandi[noPelanggaran] = pinCode;
-      }
-    }
-  }).catch(e => console.log("Gagal memuat pin"));
-
-  // Ambil Database Roster
-  fetch(urlRoster).then(res => res.text()).then(data => {
-    document.getElementById("status-loading").style.display = "none";
-    let baris = data.split("\n");
-    databaseRoster = [];
-    
-    for(let i=1; i<baris.length; i++) {
-      let kolom = baris[i].split(",");
-      if(kolom.length >= 3) {
-        databaseRoster.push({
-          hari: kolom[0].replace(/"/g, '').trim(),
-          mapel: kolom[1].replace(/"/g, '').trim(),
-          link: kolom[2].replace(/"/g, '').trim()
-        });
-      }
-    }
-  }).catch(err => {
-    document.getElementById("status-loading").innerText = "Gagal memuat database!";
-  });
-}
 
 function pilihKelas(angkaKelas, elemen) {
   document.querySelectorAll('.btn-kelas').forEach(btn => btn.classList.remove('active'));
@@ -128,13 +123,7 @@ function pilihKelas(angkaKelas, elemen) {
 
   let hariList = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
   
-  if (databaseRoster.length === 0) {
-    kontainer.innerHTML = "<p style='color:red; text-align:center; padding:20px;'>Data dari Google Sheets sedang dimuat atau gagal diakses. Pastikan setelan share sudah menjadi 'Pelihat'.</p>";
-    return;
-  }
-  
   hariList.forEach(hari => {
-    // SEKARANG MENCARI BERDASARKAN ANGKA BENTUK "KELAS 7" ATAU "KELAS 8"
     let mapelHariIni = databaseRoster.filter(r => 
       r.hari.toLowerCase() === hari.toLowerCase() && 
       r.mapel.toUpperCase().includes("KELAS " + angkaKelas)
@@ -206,10 +195,10 @@ function bukaKunciPengawas() {
     document.getElementById("blocker").style.display = "none";
     document.getElementById("main-portal").style.display = "block";
     
-    alert("Kunci berhasil dibuka! Silakan minta siswa masuk kembali ke lembar soal.");
+    alert("Kunci berhasil dibuka! Silakan minta siswa masuk kembali.");
     location.reload();
   } else {
-    alert("❌ PIN SALAH!\nPIN tidak cocok dengan database.");
+    alert("❌ PIN SALAH!");
   }
 }
 </script>
