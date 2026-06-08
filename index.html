@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>EXAMBRO YASPI ULTIMATE</title>
+  <title>EXAMBRO YASPI ULTIMATE FIX</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 10px; text-align: center; -webkit-user-select: none; user-select: none; }
@@ -59,9 +59,9 @@ let deferredPrompt;
 let html5QrCode = null;
 let alarmInterval = null;
 let linkUjianTarget = "";
-let waktuMeninggalkanHalaman = 0;
 
 window.onload = function() {
+  // Cek apakah HP siswa dalam status terhukum/terkunci sebelumnya
   if (localStorage.getItem("exambro_locked_ultimate") === "true") {
     kunciLayarSiswa();
   } else {
@@ -69,7 +69,7 @@ window.onload = function() {
   }
 };
 
-// PWA Installer
+// PWA Installer (Tombol Tambahkan ke Layar Utama)
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
@@ -125,40 +125,31 @@ function scanBerhasil(decodedText) {
 }
 
 function bukaTabSoal() {
-  // Tandai di memori bahwa ujian resmi dimulai
+  // Aktifkan mode penjagaan ketat di memori browser HP
   localStorage.setItem("ujian_active_ultimate", "true");
   
-  // Buka Google Form di tab baru secara resmi dan bersih (Bebas Error Cookie!)
+  // Buka Google Form di tab baru (Murni, lancar, bebas eror cookie)
   window.open(linkUjianTarget, '_blank');
 }
 
-// 🚨 DETECTOR KECURANGAN CERDAS (SISTEM SELISIH WAKTU)
-function tanganiPerubahanFokus() {
+// 🚨 DETEKSI KECURANGAN: JIKA SISWA KELUAR DARI CHROME/BROWSER KESELURUHAN (HOME / WA)
+window.addEventListener("blur", function() {
   if (localStorage.getItem("ujian_active_ultimate") === "true") {
-    if (document.hidden || !document.hasFocus()) {
-      // Murid sedang berada di tab Google Form (Wajar), rekam waktu mulainya
-      waktuMeninggalkanHalaman = new Date().getTime();
-    } else {
-      // Murid kembali melihat halaman Exambro utama
-      let waktuKembali = new Date().getTime();
-      let selisihDetik = (waktuKembali - waktuMeninggalkanHalaman) / 1000;
-
-      // Jika mereka kembali ke halaman Exambro setelah lebih dari 10 detik,
-      // artinya mereka sengaja menutup tab ujian atau menekan tombol home/pindah aplikasi!
-      if (selisihDetik > 10) {
+    // Jeda aman 1 detik untuk memastikan akurasi data fokus layar browser
+    setTimeout(function() {
+      if (!document.hasFocus()) {
         kunciLayarSiswa();
       }
-    }
+    }, 1000);
   }
-}
-
-document.addEventListener("visibilitychange", tanganiPerubahanFokus);
+});
 
 function kunciLayarSiswa() {
   localStorage.setItem("exambro_locked_ultimate", "true");
   document.getElementById("main-container").style.display = "none";
   document.getElementById("blocker").style.display = "block";
   
+  // Jalankan alarm suara berulang setiap 4 detik
   if (!alarmInterval) {
     bunyikanSuaraPeringatan();
     alarmInterval = setInterval(bunyikanSuaraPeringatan, 4000);
@@ -177,26 +168,31 @@ function bunyikanSuaraPeringatan() {
 
 document.addEventListener("contextmenu", e => e.preventDefault());
 
-// PEMBUKAAN KUNCI OLEH PENGAWAS
+// PEMBUKAAN KUNCI OLEH PENGAWAS (ANTI SALAH KETIK PIN)
 function bukaKunciPengawas() {
   let inputPin = prompt("Masukkan PIN PENGAWAS Ruangan:");
   if (inputPin === null) return;
 
+  // Bersihkan spasi tak sengaja dan ubah ke huruf kapital semua otomatis
   let pinBersih = inputPin.trim().toUpperCase();
 
   if (pinBersih === "YASPI2026") {
+    // Matikan alarm total
     clearInterval(alarmInterval);
     alarmInterval = null;
     window.speechSynthesis.cancel(); 
     
+    // Hapus status hukuman di memori HP
     localStorage.removeItem("exambro_locked_ultimate");
     localStorage.removeItem("ujian_active_ultimate");
     
+    // Kembalikan tampilan ke menu scanner awal
     document.getElementById("blocker").style.display = "none";
+    document.getElementById("main-container").style.display = "block";
     document.getElementById("scan-area").style.display = "block";
     document.getElementById("ready-area").style.display = "none";
     
-    location.reload(); // Ulangi scanner dari awal
+    location.reload(); // Segarkan halaman agar kamera aktif kembali
   } else {
     alert("PIN Salah! Alarm akan tetap berbunyi.");
   }
