@@ -26,6 +26,9 @@
     .mapel-info p { font-size: 12px; color: #64748b; margin-top: 2px; }
     .btn-mulai { padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
     
+    /* Tombol Kembali */
+    .btn-kembali { display: none; width: 100%; max-width: 150px; margin: 20px auto 0 auto; padding: 10px; background: #64748b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
+
     /* Status Loading */
     #status-loading { color: #3b82f6; font-size: 14px; margin: 15px 0; font-weight: 500; }
 
@@ -45,7 +48,7 @@
     Pelanggaran Ke: 0
   </p>
   <br>
-  <button class="btn-unlock" onclick="bukaKunciPengawas()">🔓 Buka Kunci (Masukkan PIN Pengawas)</button>
+  <button class="btn-unlock" onclick="bukaKunciPengawas()">🔓 Buka Kunci<br><span id="info-pin-ke" style="font-size:12px; font-weight:normal; opacity:0.9;"></span></button>
 </div>
 
 <div class="container" id="main-portal">
@@ -53,7 +56,7 @@
   <h2>PORTAL ROSTER UJIAN YASPI</h2>
   <p class="sub-title">Silakan pilih kelas Anda untuk melihat jadwal dan mulai ujian.</p>
 
-  <div class="kelas-selection">
+  <div class="kelas-selection" id="menu-kelas-utama">
     <button class="btn-kelas" onclick="pilihKelas('7', this)">Kelas 7</button>
     <button class="btn-kelas" onclick="pilihKelas('8', this)">Kelas 8</button>
   </div>
@@ -61,6 +64,8 @@
   <div id="status-loading">Memuat data ujian dari Google Sheets...</div>
 
   <div id="roster-container"></div>
+  
+  <button class="btn-kembali" id="btn-back-main" onclick="kembaliKeMenuUtama()">⬅️ KEMBALI</button>
 </div>
 
 <script>
@@ -78,6 +83,22 @@ window.onload = function() {
   }
 };
 
+// Fungsi pemisah baris CSV pintar (Mendukung Koma maupun Titik Koma wilayah Indonesia)
+function deteksiDanPisahKolom(barisTeks) {
+  let karakterPemisah = ",";
+  if (barisTeks.includes(";")) {
+    let hitungKoma = (barisTeks.match(/,/g) || []).length;
+    let hitungTitikKoma = (barisTeks.match(/;/g) || []).length;
+    if (hitungTitikKoma > hitungKoma) karakterPemisah = ";";
+  }
+  
+  if (karakterPemisah === ",") {
+    return barisTeks.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+  } else {
+    return barisTeks.split(/;(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+  }
+}
+
 function ambilDataSpreadsheet() {
   const base_url = SPREADSHEET_URL.split("/edit")[0];
   const urlRoster = base_url + '/gviz/tq?tqx=out:csv&sheet=roster';
@@ -89,7 +110,7 @@ function ambilDataSpreadsheet() {
     .then(text => {
       let baris = text.split(/\r?\n/);
       for(let i = 1; i < baris.length; i++) {
-        let kolom = baris[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        let kolom = deteksiDanPisahKolom(baris[i]);
         if(kolom.length >= 2) {
           let noPel = kolom[0].replace(/"/g, '').trim();
           let pin = kolom[1].replace(/"/g, '').trim().toUpperCase();
@@ -98,7 +119,7 @@ function ambilDataSpreadsheet() {
       }
     }).catch(err => console.log("Gagal memuat tab sandi"));
 
-  // 2. Ambil Roster 4 Kolom Baru (A: Hari, B: Kelas, C: Mapel, D: Link)
+  // 2. Ambil Roster (A: Hari, B: Kelas, C: Mapel, D: Link)
   fetch(urlRoster)
     .then(res => res.text())
     .then(text => {
@@ -107,19 +128,19 @@ function ambilDataSpreadsheet() {
       databaseRoster = [];
       
       for(let i = 1; i < baris.length; i++) {
-        let kolom = baris[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        let kolom = deteksiDanPisahKolom(baris[i]);
         if(kolom.length >= 4) {
           databaseRoster.push({
             hari: kolom[0].replace(/"/g, '').trim(),
-            kelas: kolom[1].replace(/"/g, '').trim(), // Kolom B
-            mapel: kolom[2].replace(/"/g, '').trim(), // Kolom C
-            link: kolom[3].replace(/"/g, '').trim()   // Kolom D
+            kelas: kolom[1].replace(/"/g, '').trim(), 
+            mapel: kolom[2].replace(/"/g, '').trim(), 
+            link: kolom[3].replace(/"/g, '').trim()   
           });
         }
       }
     })
     .catch(err => {
-      document.getElementById("status-loading").innerText = "❌ Gagal memuat database!";
+      document.getElementById("status-loading").innerText = "❌ Gagal memuat database! Hubungkan internet.";
       document.getElementById("status-loading").style.color = "red";
     });
 }
@@ -132,7 +153,7 @@ function pilihKelas(targetKelas, elemen) {
   kontainer.innerHTML = ""; 
 
   if (databaseRoster.length === 0) {
-    kontainer.innerHTML = "<p style='color:#b91c1c; text-align:center; font-weight:bold; padding:15px;'>Data belum siap, silakan ketuk ulang tombol kelas beberapa saat lagi.</p>";
+    kontainer.innerHTML = "<p style='color:#b91c1c; text-align:center; font-weight:bold; padding:15px;'>Data sedang dimuat, ketuk ulang dalam 3 detik...</p>";
     return;
   }
 
@@ -140,7 +161,6 @@ function pilihKelas(targetKelas, elemen) {
   let dataDitemukan = false;
 
   hariList.forEach(hari => {
-    // Mencocokkan langsung karakter string murni dari Kolom B
     let mapelHariIni = databaseRoster.filter(r => 
       r.hari.toLowerCase() === hari.toLowerCase() && 
       r.kelas.toString().trim() === targetKelas.toString().trim()
@@ -166,8 +186,8 @@ function pilihKelas(targetKelas, elemen) {
 
         card.innerHTML = `
           <div class="mapel-info">
-            <h4>${m.mapel} - KELAS ${m.kelas}</h4>
-            <p>Klik tombol untuk meluncur ke lembar ujian Google Form.</p>
+            <h4>${m.mapel}</h4>
+            <p>Klik mulai untuk membuka lembar Google Form ujian.</p>
           </div>
           ${tombolHtml}
         `;
@@ -180,6 +200,15 @@ function pilihKelas(targetKelas, elemen) {
   if (!dataDitemukan) {
     kontainer.innerHTML = "<p style='text-align:center; color:#64748b; padding:20px;'>Jadwal kelas ini tidak ditemukan di spreadsheet.</p>";
   }
+
+  // Tampilkan tombol kembali setelah memilih kelas
+  document.getElementById("btn-back-main").style.display = "block";
+}
+
+function kembaliKeMenuUtama() {
+  document.getElementById("roster-container").innerHTML = "";
+  document.querySelectorAll('.btn-kelas').forEach(btn => btn.classList.remove('active'));
+  document.getElementById("btn-back-main").style.display = "none";
 }
 
 function mulaiUjian(linkGoogleForm) {
@@ -204,6 +233,9 @@ function kunciPortalSiswa() {
   document.getElementById("main-portal").style.display = "none";
   document.getElementById("blocker").style.display = "block";
   document.getElementById("lock-count").innerText = "Pelanggaran Ke: " + countKeluar;
+  
+  // Memasukkan info petunjuk nomor PIN yang harus diisi di tombol tirai merah
+  document.getElementById("info-pin-ke").innerText = "(Masukkan PIN Pengawas Ruangan Ke-" + countKeluar + ")";
 }
 
 function bukaKunciPengawas() {
