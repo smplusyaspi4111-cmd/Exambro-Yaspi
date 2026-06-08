@@ -64,7 +64,6 @@
 </div>
 
 <script>
-// Link Google Spreadsheet Resmi milikmu
 const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGbMDc0aFb9CxkugUbfbVkcliIfnxNc/edit";
 
 let databaseRoster = [];
@@ -79,13 +78,12 @@ window.onload = function() {
   }
 };
 
-// Fungsi mengambil data langsung dari Kolom Spreadsheet tanpa simpan di kode HTML
 function ambilDataSpreadsheet() {
   const base_url = SPREADSHEET_URL.split("/edit")[0];
   const urlRoster = base_url + '/gviz/tq?tqx=out:csv&sheet=roster';
   const urlSandi = base_url + '/gviz/tq?tqx=out:csv&sheet=sandi';
 
-  // 1. Ambil Data PIN Pengawas
+  // 1. Ambil PIN Pengawas
   fetch(urlSandi)
     .then(res => res.text())
     .then(text => {
@@ -100,7 +98,7 @@ function ambilDataSpreadsheet() {
       }
     }).catch(err => console.log("Gagal memuat tab sandi"));
 
-  // 2. Ambil Data Roster dan Link Google Form
+  // 2. Ambil Roster Berdasarkan Formasi 4 Kolom Baru (A: Hari, B: Kelas, C: Mapel, D: Link)
   fetch(urlRoster)
     .then(res => res.text())
     .then(text => {
@@ -109,25 +107,24 @@ function ambilDataSpreadsheet() {
       databaseRoster = [];
       
       for(let i = 1; i < baris.length; i++) {
-        // Regex pengaman agar jika link berisi tanda koma tidak merusak struktur tabel
-        let kolom = baris[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-        if(kolom.length >= 3) {
+        let kolom = baris[i].split(/,(?=(?:(?:[^"]*"){2})*[^微"]*$)/);
+        if(kolom.length >= 4) {
           databaseRoster.push({
             hari: kolom[0].replace(/"/g, '').trim(),
-            mapel: kolom[1].replace(/"/g, '').trim(),
-            link: kolom[2].replace(/"/g, '').trim()
+            kelas: kolom[1].replace(/"/g, '').trim(), // Membaca Kolom B (Kelas)
+            mapel: kolom[2].replace(/"/g, '').trim(), // Membaca Kolom C (Mapel)
+            link: kolom[3].replace(/"/g, '').trim()   // Membaca Kolom D (Link)
           });
         }
       }
     })
     .catch(err => {
-      document.getElementById("status-loading").innerText = "❌ Gagal menyambungkan ke Spreadsheet! Pastikan status Akses Umum sudah 'Siapa saja yang memiliki link'.";
+      document.getElementById("status-loading").innerText = "❌ Gagal memuat database!";
       document.getElementById("status-loading").style.color = "red";
     });
 }
 
-function pilihKelas(angkaKelas, elemen) {
-  // Aktifkan style tombol yang ditekan
+function pilihKelas(targetKelas, elemen) {
   document.querySelectorAll('.btn-kelas').forEach(btn => btn.classList.remove('active'));
   elemen.classList.add('active');
 
@@ -135,7 +132,7 @@ function pilihKelas(angkaKelas, elemen) {
   kontainer.innerHTML = ""; 
 
   if (databaseRoster.length === 0) {
-    kontainer.innerHTML = "<p style='color:#b91c1c; text-align:center; font-weight:bold; padding:15px;'>Data sedang diproses atau gagal dimuat. Tunggu sebentar lalu tekan kembali.</p>";
+    kontainer.innerHTML = "<p style='color:#b91c1c; text-align:center; font-weight:bold; padding:15px;'>Data belum siap, silakan ketuk ulang tombol kelas beberapa saat lagi.</p>";
     return;
   }
 
@@ -143,10 +140,10 @@ function pilihKelas(angkaKelas, elemen) {
   let dataDitemukan = false;
 
   hariList.forEach(hari => {
-    // Filter otomatis mencari kata "Kelas 7" atau "Kelas 8" sesuai isi Spreadsheet kamu
+    // COCOKAN LANGSUNG DENGAN KOLOM B SPREADSHEET (Mencari angka '7' atau '8')
     let mapelHariIni = databaseRoster.filter(r => 
       r.hari.toLowerCase() === hari.toLowerCase() && 
-      r.mapel.toUpperCase().includes("KELAS " + angkaKelas)
+      r.kelas === targetKelas
     );
     
     if(mapelHariIni.length > 0) {
@@ -160,7 +157,6 @@ function pilihKelas(angkaKelas, elemen) {
         let card = document.createElement("div");
         card.className = "mapel-card";
         
-        // Cek apakah kolom link di spreadsheet diisi link asli atau masih tulisan "[Isi Link...]"
         let tombolHtml = "";
         if (m.link.startsWith("http")) {
           tombolHtml = `<button class="btn-mulai" onclick="mulaiUjian('${m.link}')">MULAI</button>`;
@@ -170,7 +166,7 @@ function pilihKelas(angkaKelas, elemen) {
 
         card.innerHTML = `
           <div class="mapel-info">
-            <h4>${m.mapel}</h4>
+            <h4>${m.mapel} - KELAS ${m.kelas}</h4>
             <p>Klik tombol untuk meluncur ke lembar ujian Google Form.</p>
           </div>
           ${tombolHtml}
@@ -182,7 +178,7 @@ function pilihKelas(angkaKelas, elemen) {
   });
 
   if (!dataDitemukan) {
-    kontainer.innerHTML = "<p style='text-align:center; color:#64748b; padding:20px;'>Jadwal untuk kelas ini tidak ditemukan di spreadsheet.</p>";
+    kontainer.innerHTML = "<p style='text-align:center; color:#64748b; padding:20px;'>Jadwal ujian kelas ini belum tersedia atau format penulisan salah.</p>";
   }
 }
 
