@@ -29,7 +29,7 @@
     /* Loading status */
     #status-loading { color: #3b82f6; font-size: 14px; margin: 15px 0; display: none; }
 
-    /* 🚨 TIRAI MERAH PENGUNCI (SISTEM COUNTER BREAK) */
+    /* 🚨 TIRAI MERAH PENGUNCI */
     #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #b91c1c; color: white; z-index: 10000; padding: 20% 20px 0 20px; text-align: center; box-sizing: border-box; }
     #blocker h1 { font-size: 32px; margin-bottom: 15px; font-weight: bold; }
     #blocker p { font-size: 15px; margin-bottom: 5px; color: #fecaca; }
@@ -55,7 +55,7 @@
 
   <div class="kelas-selection">
     <button class="btn-kelas" onclick="pilihKelas('VII', this)">KELAS VII (7)</button>
-    <button class="btn-kelas" onclick="pilihKelas('VIII', this)">KELAS VIII (8)</button>
+    <button class="btn-kelas" onclick="withDataCheck('VIII', this)">KELAS VIII (8)</button>
   </div>
 
   <div id="status-loading">Sedang mengambil data roster ujian terbaru...</div>
@@ -64,8 +64,8 @@
 </div>
 
 <script>
-// 🛠️ MASUKKAN LINK GOOGLE SPREADSHEET KAMU YANG SUDAH DI-SHARE DI SINI:
-const SPREADSHEET_URL = "URL_SPREADSHEET_KAMU_DI_SINI";
+// 🛠️ LINK SPREADSHEET ASLI KAMU SUDAH BERADA DI TEMPAT YANG BENAR SEKARANG:
+const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGbMDc0aFb9CxkugUbfbVkcliIfnxNc/edit";
 
 let databaseRoster = [];
 let databaseSandi = {};
@@ -80,14 +80,13 @@ window.onload = function() {
 };
 
 function muatDataDariSpreadsheet() {
-  if(SPREADSHEET_URL === "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGbMDc0aFb9CxkugUbfbVkcliIfnxNc/edit?usp=sharing") return;
-  
   document.getElementById("status-loading").style.display = "block";
   
-  const urlRoster = SPREADSHEET_URL.replace(/\/edit.*/, '/gviz/tq?tqx=out:csv&sheet=roster');
-  const urlSandi = SPREADSHEET_URL.replace(/\/edit.*/, '/gviz/tq?tqx=out:csv&sheet=sandi');
+  // Format konversi CSV yang bersih tanpa gangguan ekor link
+  const urlRoster = SPREADSHEET_URL.split("/edit")[0] + '/gviz/tq?tqx=out:csv&sheet=roster';
+  const urlSandi = SPREADSHEET_URL.split("/edit")[0] + '/gviz/tq?tqx=out:csv&sheet=sandi';
 
-  // Load Database Sandi PIN
+  // Ambil data PIN
   fetch(urlSandi).then(res => res.text()).then(data => {
     let baris = data.split("\n");
     for(let i=1; i<baris.length; i++) {
@@ -98,9 +97,9 @@ function muatDataDariSpreadsheet() {
         databaseSandi[noPelanggaran] = pinCode;
       }
     }
-  });
+  }).catch(e => console.log("Gagal memuat pin"));
 
-  // Load Database Roster
+  // Ambil data Roster
   fetch(urlRoster).then(res => res.text()).then(data => {
     document.getElementById("status-loading").style.display = "none";
     let baris = data.split("\n");
@@ -117,8 +116,12 @@ function muatDataDariSpreadsheet() {
       }
     }
   }).catch(err => {
-    document.getElementById("status-loading").innerText = "Gagal memuat database! Cek setelan Share Spreadsheet.";
+    document.getElementById("status-loading").innerText = "Gagal memuat database! Cek apakah spreadsheet sudah diset sebagai 'Pelihat untuk semua orang'.";
   });
+}
+
+function withDataCheck(romawiKelas, elemen) {
+  pilihKelas(romawiKelas, elemen);
 }
 
 function pilihKelas(romawiKelas, elemen) {
@@ -130,8 +133,13 @@ function pilihKelas(romawiKelas, elemen) {
 
   let hariList = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
   
+  // Jika database kosong karena proses fetch bermasalah
+  if (databaseRoster.length === 0) {
+    kontainer.innerHTML = "<p style='color:red; text-align:center; padding:20px;'>Data belum siap atau gagal dimuat dari Google Sheets. Pastikan Spreadsheet sudah di-Share ke publik!</p>";
+    return;
+  }
+  
   hariList.forEach(hari => {
-    // Membaca kata kunci romawi (contoh: "Kelas VII" atau "Kelas VIII") di dalam kolom spreadsheet
     let mapelHariIni = databaseRoster.filter(r => 
       r.hari.toLowerCase() === hari.toLowerCase() && 
       r.mapel.toUpperCase().includes("KELAS " + romawiKelas)
@@ -165,7 +173,6 @@ function mulaiUjian(linkGoogleForm) {
   window.open(linkGoogleForm, '_blank');
 }
 
-// 🚨 RADAR SENSOR KECURANGAN
 window.addEventListener("blur", function() {
   if (localStorage.getItem("yaspi_ujian_running") === "true") {
     setTimeout(function() {
