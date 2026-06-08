@@ -26,7 +26,7 @@
     .mapel-info p { font-size: 12px; color: #64748b; margin-top: 2px; }
     .btn-mulai { padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
 
-    /* 🚨 TIRAI MERAH PENGUNCI */
+    /* 🚨 TIRAI MERAH PENGUNCI (SISTEM ANTI KECURANGAN) */
     #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #b91c1c; color: white; z-index: 10000; padding: 20% 20px 0 20px; text-align: center; box-sizing: border-box; }
     #blocker h1 { font-size: 32px; margin-bottom: 15px; font-weight: bold; }
     #blocker p { font-size: 15px; margin-bottom: 5px; color: #fecaca; }
@@ -59,45 +59,45 @@
 </div>
 
 <script>
-// 📋 DATA ROSTER LANGSUNG DI DALAM KODE (Silakan ganti teks 'LINK_FORM_SOAL' dengan link G-Form aslimu)
+// 📋 REKAPAN DATA JADWAL INTERNAL (Silakan ganti teks 'LINK_FORM_DI_SINI' dengan link G-Form mapel terkait)
 const databaseRoster = [
   // --- HARI SENIN ---
-  { hari: "Senin", mapel: "IPA - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Senin", mapel: "BAHASA INDONESIA - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Senin", mapel: "BAHASA INDONESIA - Kelas 8", link: "LINK_FORM_SOAL" },
-  { hari: "Senin", mapel: "MATEMATIKA - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Senin", mapel: "IPA - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Senin", mapel: "BAHASA INDONESIA - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Senin", mapel: "BAHASA INDONESIA - Kelas 8", link: "LINK_FORM_DI_SINI" },
+  { hari: "Senin", mapel: "MATEMATIKA - Kelas 8", link: "LINK_FORM_DI_SINI" },
   
   // --- HARI SELASA ---
-  { hari: "Selasa", mapel: "MATEMATIKA - Kelas 7", link: "https://forms.gle/oEyXTy8naqoB6mqVA" }, // Link Matematika 7 punyamu yang sudah ada
-  { hari: "Selasa", mapel: "PEND. AGAMA ISLAM - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Selasa", mapel: "PEND. AGAMA ISLAM - Kelas 8", link: "LINK_FORM_SOAL" },
-  { hari: "Selasa", mapel: "PKN - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Selasa", mapel: "MATEMATIKA - Kelas 7", link: "https://forms.gle/oEyXTy8naqoB6mqVA" },
+  { hari: "Selasa", mapel: "PEND. AGAMA ISLAM - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Selasa", mapel: "PEND. AGAMA ISLAM - Kelas 8", link: "LINK_FORM_DI_SINI" },
+  { hari: "Selasa", mapel: "PKN - Kelas 8", link: "LINK_FORM_DI_SINI" },
   
   // --- HARI RABU ---
-  { hari: "Rabu", mapel: "PKN - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Rabu", mapel: "FIQIH IBADAH - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Rabu", mapel: "FIQIH IBADAH - Kelas 8", link: "LINK_FORM_SOAL" },
-  { hari: "Rabu", mapel: "INFORMATIKA - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Rabu", mapel: "PKN - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Rabu", mapel: "FIQIH IBADAH - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Rabu", mapel: "FIQIH IBADAH - Kelas 8", link: "LINK_FORM_DI_SINI" },
+  { hari: "Rabu", mapel: "INFORMATIKA - Kelas 8", link: "LINK_FORM_DI_SINI" },
   
   // --- HARI KAMIS ---
-  { hari: "Kamis", mapel: "BAHASA INGGRIS - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Kamis", mapel: "INFORMATIKA - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Kamis", mapel: "IPS - Kelas 8", link: "LINK_FORM_SOAL" },
-  { hari: "Kamis", mapel: "SENI - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Kamis", mapel: "BAHASA INGGRIS - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Kamis", mapel: "INFORMATIKA - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Kamis", mapel: "IPS - Kelas 8", link: "LINK_FORM_DI_SINI" },
+  { hari: "Kamis", mapel: "SENI - Kelas 8", link: "LINK_FORM_DI_SINI" },
   
   // --- HARI JUMAT ---
-  { hari: "Jumat", mapel: "IPS - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Jumat", mapel: "PENJASORKES - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Jumat", mapel: "PENJASORKES - Kelas 8", link: "LINK_FORM_SOAL" },
-  { hari: "Jumat", mapel: "IPA - Kelas 8", link: "LINK_FORM_SOAL" },
+  { hari: "Jumat", mapel: "IPS - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Jumat", mapel: "PENJASORKES - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Jumat", mapel: "PENJASORKES - Kelas 8", link: "LINK_FORM_DI_SINI" },
+  { hari: "Jumat", mapel: "IPA - Kelas 8", link: "LINK_FORM_DI_SINI" },
   
   // --- HARI SABTU ---
-  { hari: "Sabtu", mapel: "SENI - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Sabtu", mapel: "BAHASA INGGRIS - Kelas 7", link: "LINK_FORM_SOAL" },
-  { hari: "Sabtu", mapel: "BAHASA INGGRIS - Kelas 8", link: "LINK_FORM_SOAL" }
+  { hari: "Sabtu", mapel: "SENI - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Sabtu", mapel: "BAHASA INGGRIS - Kelas 7", link: "LINK_FORM_DI_SINI" },
+  { hari: "Sabtu", mapel: "BAHASA INGGRIS - Kelas 8", link: "LINK_FORM_DI_SINI" }
 ];
 
-// 🔑 DAFTAR PIN PENGAWAS LANGSUNG
+// 🔑 DATABASE PIN SEBAGAI PENGUNCI (BISA KAMU UBAH DI SINI)
 const databaseSandi = {
   "1": "YASPIAMAN",
   "2": "JANGANCONTEK",
