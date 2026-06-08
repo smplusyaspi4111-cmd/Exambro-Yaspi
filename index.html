@@ -83,7 +83,6 @@ window.onload = function() {
   }
 };
 
-// Fungsi pemisah baris CSV pintar (Mendukung Koma maupun Titik Koma wilayah Indonesia)
 function deteksiDanPisahKolom(barisTeks) {
   let karakterPemisah = ",";
   if (barisTeks.includes(";")) {
@@ -104,7 +103,7 @@ function ambilDataSpreadsheet() {
   const urlRoster = base_url + '/gviz/tq?tqx=out:csv&sheet=roster';
   const urlSandi = base_url + '/gviz/tq?tqx=out:csv&sheet=sandi';
 
-  // 1. Ambil PIN Pengawas
+  // 1. Ambil PIN Pengawas (Otomatis dikonversi ke huruf kapital di memori sistem agar adil)
   fetch(urlSandi)
     .then(res => res.text())
     .then(text => {
@@ -119,7 +118,7 @@ function ambilDataSpreadsheet() {
       }
     }).catch(err => console.log("Gagal memuat tab sandi"));
 
-  // 2. Ambil Roster (A: Hari, B: Kelas, C: Mapel, D: Link)
+  // 2. Ambil Roster
   fetch(urlRoster)
     .then(res => res.text())
     .then(text => {
@@ -140,7 +139,7 @@ function ambilDataSpreadsheet() {
       }
     })
     .catch(err => {
-      document.getElementById("status-loading").innerText = "❌ Gagal memuat database! Hubungkan internet.";
+      document.getElementById("status-loading").innerText = "❌ Gagal memuat database!";
       document.getElementById("status-loading").style.color = "red";
     });
 }
@@ -201,7 +200,6 @@ function pilihKelas(targetKelas, elemen) {
     kontainer.innerHTML = "<p style='text-align:center; color:#64748b; padding:20px;'>Jadwal kelas ini tidak ditemukan di spreadsheet.</p>";
   }
 
-  // Tampilkan tombol kembali setelah memilih kelas
   document.getElementById("btn-back-main").style.display = "block";
 }
 
@@ -234,14 +232,15 @@ function kunciPortalSiswa() {
   document.getElementById("blocker").style.display = "block";
   document.getElementById("lock-count").innerText = "Pelanggaran Ke: " + countKeluar;
   
-  // Memasukkan info petunjuk nomor PIN yang harus diisi di tombol tirai merah
-  document.getElementById("info-pin-ke").innerText = "(Masukkan PIN Pengawas Ruangan Ke-" + countKeluar + ")";
+  // Update Teks Pelanggaran Ke-X agar informatif
+  document.getElementById("info-pin-ke").innerText = "(Masukkan PIN Pengawas Ruangan Untuk Pelanggaran Ke-" + countKeluar + ")";
 }
 
 function bukaKunciPengawas() {
-  let inputPin = prompt("🚨 PELANGGARAN TERDETEKSI!\nMasukkan PIN PENGAWAS Ruangan Ke-" + countKeluar + ":");
+  let inputPin = prompt("🚨 PELANGGARAN TERDETEKSI!\nMasukkan PIN PENGAWAS Ruangan Untuk Pelanggaran Ke-" + countKeluar + ":");
   if (inputPin === null) return;
 
+  // Kebal Huruf Kecil: Input diubah otomatis ke huruf besar agar cocok dengan memori
   let pinBersih = inputPin.trim().toUpperCase();
   let pinTargetSah = databaseSandi[countKeluar.toString()];
 
