@@ -163,9 +163,7 @@ function pilihKelas(targetKelas, elemen) {
     return;
   }
 
-  // Mengambil daftar hari unik yang tersedia secara dinamis langsung dari spreadsheet
   let daftarHariUnik = [...new Set(databaseRoster.map(r => r.hari))];
-
   let dataDitemukan = false;
 
   daftarHariUnik.forEach(hariTeks => {
@@ -180,21 +178,18 @@ function pilihKelas(targetKelas, elemen) {
       areaHari.className = "roster-area";
       areaHari.style.display = "block";
       
-      // Membaca teks hari dan tanggal murni dari kolom spreadsheet kamu
-      areaHari.innerHTML = `<div class="roster-title">📅 Hari ${hariTeks}</div>`;
+      areaHari.innerHTML = `<div class="roster-title">📅 ${hariTeks}</div>`;
       
       mapelHariIni.forEach(m => {
         let card = document.createElement("div");
         card.className = "mapel-card";
         
-        // Cek memori lokal apakah mapel ini sudah pernah dibuka oleh siswa di HP tersebut
         let kunciMemoriLokal = "sudah_buka_" + targetKelas + "_" + m.mapel.replace(/\s+/g, '_');
         let statusSudahDikerjakan = localStorage.getItem(kunciMemoriLokal) === "true";
         
         let tombolHtml = "";
         if (m.link.startsWith("http")) {
           if (statusSudahDikerjakan) {
-            // Jika sudah diklik, tambahkan kelas warna kuning (.sudah-dikerjakan)
             tombolHtml = `<button class="btn-mulai sudah-dikerjakan" onclick="mulaiUjian('${m.link}', '${kunciMemoriLokal}')">MULAI</button>`;
           } else {
             tombolHtml = `<button class="btn-mulai" onclick="mulaiUjian('${m.link}', '${kunciMemoriLokal}')">MULAI</button>`;
@@ -230,13 +225,10 @@ function kembaliKeMenuUtama() {
 }
 
 function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
-  // Simpan penanda bahwa tombol mapel ini sudah diklik ke kuning
   localStorage.setItem(kunciMemoriLokal, "true");
-  
   localStorage.setItem("yaspi_ujian_running", "true");
   window.open(linkGoogleForm, '_blank');
   
-  // Muat ulang pelan di latar belakang agar warna tombol langsung berubah jadi kuning saat tirai merah menutup/terbuka nanti
   setTimeout(() => { location.reload(); }, 500);
 }
 
@@ -308,7 +300,6 @@ function resetPelanggaranManual() {
   
   if (konfirmasi.trim().toUpperCase() === pinSatu) {
     countKeluar = 0;
-    // Bersihkan riwayat kunci tapi pertahankan riwayat tombol kuning agar tidak hilang
     localStorage.removeItem("yaspi_cheat_count");
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running");
