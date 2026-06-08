@@ -38,7 +38,8 @@
     #blocker p { font-size: 15px; margin-bottom: 5px; color: #fecaca; }
     .btn-unlock { margin-top: 25px; padding: 12px 35px; background: white; color: #b91c1c; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 100%; max-width: 320px; }
     
-    .btn-reset-opsional { margin-top: 40px; display: inline-block; background: transparent; color: #fca5a5; border: 1px dashed #fca5a5; padding: 6px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; text-decoration: none; opacity: 0.7; }
+    /* Tombol reset tersembunyi secara default */
+    .btn-reset-opsional { display: none; margin-top: 40px; background: transparent; color: #fca5a5; border: 1px dashed #fca5a5; padding: 6px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; text-decoration: none; opacity: 0.7; margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body>
@@ -52,7 +53,7 @@
   <br>
   <button class="btn-unlock" onclick="bukaKunciPengawas()">🔓 Buka Kunci<br><span id="info-pin-ke" style="font-size:11px; font-weight:normal; opacity:0.85;"></span></button>
   <br>
-  <button class="btn-reset-opsional" onclick="resetPelanggaranManual()">⚙️ Pengawas: Reset Hitangan Ke 0</button>
+  <button id="tombol-reset-rahasia" class="btn-reset-opsional" onclick="resetPelanggaranManual()">⚙️ Pengawas: Reset Hitangan Ke 0</button>
 </div>
 
 <div class="container" id="main-portal">
@@ -101,13 +102,17 @@ function deteksiDanPisahKolom(barisTeks) {
 
 function ambilDataSpreadsheet() {
   const base_url = SPREADSHEET_URL.split("/edit")[0];
-  const urlRoster = base_url + '/gviz/tq?tqx=out:csv&sheet=roster';
-  const urlSandi = base_url + '/gviz/tq?tqx=out:csv&sheet=sandi';
+  
+  // ⚡ TRIK ANTI-CACHE: Menambahkan tanda waktu acak (?cb=...) agar HP dipaksa selalu mengambil data murni dari internet
+  const penandaWaktu = new Date().getTime();
+  const urlRoster = base_url + '/gviz/tq?tqx=out:csv&sheet=roster&cb=' + penandaWaktu;
+  const urlSandi = base_url + '/gviz/tq?tqx=out:csv&sheet=sandi&cb=' + penandaWaktu;
 
   fetch(urlSandi)
     .then(res => res.text())
     .then(text => {
       let baris = text.split(/\r?\n/);
+      databaseSandi = {}; // Kosongkan dulu untuk pengisian ulang bersih
       for(let i = 1; i < baris.length; i++) {
         let kolom = deteksiDanPisahKolom(baris[i]);
         if(kolom.length >= 2) {
@@ -233,11 +238,20 @@ function kunciPortalSiswa() {
   document.getElementById("blocker").style.display = "block";
   document.getElementById("lock-count").innerText = "Pelanggaran Ke: " + countKeluar;
   
-  // KUNCI MANUAL JELAS: Jika lewat dari pelanggaran 5, tetap minta baris 5
   let targetSandiKolom = countKeluar;
   if (targetSandiKolom > 5) targetSandiKolom = 5;
   
   document.getElementById("info-pin-ke").innerText = "(Gunakan PIN Pengawas Untuk Baris Ke-" + targetSandiKolom + ")";
+  
+  // 🔐 ATURAN FIAM: Tombol reset hanya boleh muncul jika sudah pelanggaran ke-5 atau lebih
+  if (countKeluar >= 5) {
+    document.getElementById("tombol-reset-rahasia").style.display = "inline-block";
+  } else {
+    document.getElementById("tombol-reset-rahasia").style.display = "none";
+  }
+  
+  // Tarik ulang data spreadsheet secara langsung saat layar terkunci demi keakuratan
+  ambilDataSpreadsheet();
 }
 
 function bukaKunciPengawas() {
@@ -250,8 +264,8 @@ function bukaKunciPengawas() {
   let pinBersih = inputPin.trim().toUpperCase();
   let pinTargetSah = databaseSandi[targetSandiKolom.toString()];
 
-  if (pinBersih === pinTargetSah) {
-    // 🔒 BUKA KUNCI DAN TETAP PERTAHANKAN ANGKA AKUMULATIF (Sesuai Permintaan Fiam!)
+  // Murni mencocokkan dengan data spreadsheet, tanpa ada backup teks rahasia lagi
+  if (pinTargetSah && pinBersih === pinTargetSah) {
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running"); 
     
@@ -261,15 +275,21 @@ function bukaKunciPengawas() {
     alert("Akses dibuka kembali!");
     location.reload();
   } else {
-    alert("❌ PIN SALAH!");
+    alert("❌ PIN SALAH atau data internet belum termuat! Sila ketuk ulang.");
   }
 }
 
 function resetPelanggaranManual() {
-  let konfirmasi = prompt("⚙️ RESET RIWAYAT PERANGKAT\nMasukkan PIN Ke-1 (yaspiaman) jika ingin mengosongkan riwayat pelanggaran HP ini murni ke awal:");
+  let pinSatu = databaseSandi["1"];
+  if (!pinSatu) {
+    alert("Sistem sedang mengunduh data spreadsheet, tunggu 3 detik lalu coba lagi.");
+    return;
+  }
+  
+  let konfirmasi = prompt("⚙️ RESET RIWAYAT PERANGKAT\nMasukkan PIN Ke-1 jika ingin mengosongkan riwayat pelanggaran HP ini murni ke awal:");
   if (konfirmasi === null) return;
   
-  if (konfirmasi.trim().toUpperCase() === databaseSandi["1"]) {
+  if (konfirmasi.trim().toUpperCase() === pinSatu) {
     countKeluar = 0;
     localStorage.clear();
     alert("🔄 Sukses! Seluruh riwayat pelanggaran HP ini telah dibersihkan murni ke 0.");
