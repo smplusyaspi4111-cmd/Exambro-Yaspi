@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>EXAMBRO YASPI v3</title>
+  <title>EXAMBRO YASPI FIX</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 10px; text-align: center; -webkit-user-select: none; user-select: none; }
@@ -12,6 +12,10 @@
     .btn-pasang { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 15px; display: none; }
     
     #reader { width: 100%; border-radius: 8px; overflow: hidden; background: #222; }
+    
+    /* Bingkai Google Form Ujian */
+    #exam-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; }
+    iframe { width: 100%; height: 100%; border: none; }
     
     /* 🚨 Layar Kunci Keamanan Merah */
     #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #c00000; color: white; z-index: 10000; padding-top: 25%; box-sizing: border-box; }
@@ -44,20 +48,18 @@
   <div id="reader"></div>
 </div>
 
+<div id="exam-container">
+  <iframe id="exam-frame" src=""></iframe>
+</div>
+
 <script>
 let deferredPrompt;
 let html5QrCode = null;
+let ujianDimulai = false;
 let alarmInterval = null;
 
 window.onload = function() {
-  // Cek apakah statusnya sedang terkunci akibat curang sebelumnya
-  if (localStorage.getItem("exambro_locked") === "true") {
-    document.getElementById("main-container").style.display = "none";
-    document.getElementById("blocker").style.display = "block";
-    aktifkanAlarmSuara();
-  } else {
-    mulaiKameraScanner();
-  }
+  mulaiKameraScanner();
 };
 
 // PWA Installer
@@ -104,37 +106,49 @@ function scanBerhasil(decodedText) {
     return;
   }
 
+  // Bersihkan link otomatis jika murid/guru scan link biasa, paksa ke mode rahasia /preview
+  let finalUrl = decodedText;
+  if (finalUrl.includes("/viewform")) {
+    finalUrl = finalUrl.replace("/viewform", "/preview");
+  }
+
   if (html5QrCode) {
     html5QrCode.stop().then(() => {
-      // Set status bahwa ujian sudah berjalan agar jika ditinggalkan akan langsung mengunci
-      localStorage.setItem("exambro_active", "true");
-      localStorage.setItem("exambro_target_url", decodedText);
-      
-      // ALIH KAN HALAMAN SEPENUHNYA (Solusi anti-eror cookie)
-      window.location.href = decodedText;
+      tampilkanLembarUjian(finalUrl);
     }).catch(err => console.log(err));
   }
 }
 
-// 🚨 DETEKSI JIKA DI TINGGALKAN / KELUAR APLIKASI
-function cekKecurangan() {
-  if (localStorage.getItem("exambro_active") === "true") {
-    if (document.hidden || !document.hasFocus()) {
-      localStorage.setItem("exambro_locked", "true");
-      document.getElementById("main-container").style.display = "none";
-      document.getElementById("blocker").style.display = "block";
-      aktifkanAlarmSuara();
-    }
-  }
+function tampilkanLembarUjian(urlGoogleForm) {
+  ujianDimulai = true;
+  document.getElementById("main-container").style.display = "none";
+  document.getElementById("exam-container").style.display = "block";
+  document.getElementById("exam-frame").src = urlGoogleForm;
+
+  masukModeFullScreen();
+
+  // Pasang jebakan keamanan (Aktif kembali karena di dalam iframe)
+  document.addEventListener("visibilitychange", sistemAntiNyontek);
+  window.addEventListener("blur", sistemAntiNyontek);
 }
 
-document.addEventListener("visibilitychange", cekKecurangan);
-window.addEventListener("blur", cekKecurangan);
+function masukModeFullScreen() {
+  let el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+  else if (el.msRequestFullscreen) el.msRequestFullscreen();
+}
 
-function aktifkanAlarmSuara() {
-  if (!alarmInterval) {
-    bunyikanSuaraPeringatan();
-    alarmInterval = setInterval(bunyikanSuaraPeringatan, 4000);
+function sistemAntiNyontek() {
+  if (ujianDimulai) {
+    if (document.hidden || !document.hasFocus()) {
+      document.getElementById("blocker").style.display = "block";
+      if (!alarmInterval) {
+        bunyikanSuaraPeringatan();
+        alarmInterval = setInterval(bunyikanSuaraPeringatan, 4000);
+      }
+    }
   }
 }
 
@@ -158,21 +172,11 @@ function bukaKunciPengawas() {
   let pinBersih = inputPin.trim().toUpperCase();
 
   if (pinBersih === "YASPI2026") {
-    // Matikan alarm
     clearInterval(alarmInterval);
     alarmInterval = null;
-    window.speechSynthesis.cancel();
-    
-    // Reset status kunci di memori HP
-    localStorage.removeItem("exambro_locked");
-    
-    // Kembalikan ke lembar soal otomatis
-    let urlSoal = localStorage.getItem("exambro_target_url");
-    if (urlSoal) {
-      window.location.href = urlSoal;
-    } else {
-      location.reload();
-    }
+    window.speechSynthesis.cancel(); 
+    document.getElementById("blocker").style.display = "none";
+    masukModeFullScreen();
   } else {
     alert("PIN Salah! Alarm akan tetap berbunyi.");
   }
