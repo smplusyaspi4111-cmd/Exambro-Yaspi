@@ -3,19 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>EXAMBRO YASPI FIX</title>
+  <title>EXAMBRO YASPI ULTIMATE</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 10px; text-align: center; -webkit-user-select: none; user-select: none; }
     .container { max-width: 500px; margin: 10px auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     h2 { color: #1a3a5f; margin: 5px 0 15px 0; font-size: 18px; text-transform: uppercase; }
     .btn-pasang { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 15px; display: none; }
+    .btn-mulai { width: 100%; padding: 15px; background-color: #1a3a5f; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
     
     #reader { width: 100%; border-radius: 8px; overflow: hidden; background: #222; }
-    
-    /* Bingkai Google Form Ujian */
-    #exam-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; }
-    iframe { width: 100%; height: 100%; border: none; }
     
     /* 🚨 Layar Kunci Keamanan Merah */
     #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #c00000; color: white; z-index: 10000; padding-top: 25%; box-sizing: border-box; }
@@ -30,7 +27,7 @@
 
 <div id="blocker">
   <h1>⚠️ LAYAR TERKUNCI!</h1>
-  <p>Terdeteksi keluar dari aplikasi ujian (sengaja atau tidak sengaja).</p>
+  <p>Anda terdeteksi keluar dari area ujian (Membuka aplikasi lain / Mencontek).</p>
   <p style="font-weight: bold; background: rgba(0,0,0,0.2); display: inline-block; padding: 5px 15px; border-radius: 5px; margin-top: 10px;">
     📢 ALARM AKTIF: SILAKAN LAPOR PENGAWAS!
   </p>
@@ -42,24 +39,34 @@
   <button id="btn-install" class="btn-pasang">📲 PASANG EXAMBRO DI LAYAR HP</button>
   <img src="https://i.ibb.co.com/yFbhLfRF/Logo-Yaspi.png" alt="Logo YASPI" style="width: 65px; height: auto;">
   <h2>MENU SCAN SOAL UJIAN YASPI</h2>
-  <p style="font-weight: bold; color: #dc3545; font-size: 13px; margin-bottom: 15px;">
-    Arahkan kamera ke QR Code Soal yang disediakan Pengawas!
-  </p>
-  <div id="reader"></div>
-</div>
+  
+  <div id="scan-area">
+    <p style="font-weight: bold; color: #dc3545; font-size: 13px; margin-bottom: 15px;">
+      Arahkan kamera ke QR Code Soal yang disediakan Pengawas!
+    </p>
+    <div id="reader"></div>
+  </div>
 
-<div id="exam-container">
-  <iframe id="exam-frame" src=""></iframe>
+  <div id="ready-area" style="display:none;">
+    <p style="color: #28a745; font-weight: bold; font-size: 15px;">✅ SOAL BERHASIL DIDETEKSI!</p>
+    <p style="font-size: 13px; color: #666;">Klik tombol di bawah untuk membuka soal. Jangan menutup tab Exambro ini selama ujian berlangsung!</p>
+    <button class="btn-mulai" id="btn-launch" onclick="bukaTabSoal()">🚀 MASUK KE LEMBAR UJIAN</button>
+  </div>
 </div>
 
 <script>
 let deferredPrompt;
 let html5QrCode = null;
-let ujianDimulai = false;
 let alarmInterval = null;
+let linkUjianTarget = "";
+let waktuMeninggalkanHalaman = 0;
 
 window.onload = function() {
-  mulaiKameraScanner();
+  if (localStorage.getItem("exambro_locked_ultimate") === "true") {
+    kunciLayarSiswa();
+  } else {
+    mulaiKameraScanner();
+  }
 };
 
 // PWA Installer
@@ -106,49 +113,55 @@ function scanBerhasil(decodedText) {
     return;
   }
 
-  // Bersihkan link otomatis jika murid/guru scan link biasa, paksa ke mode rahasia /preview
-  let finalUrl = decodedText;
-  if (finalUrl.includes("/viewform")) {
-    finalUrl = finalUrl.replace("/viewform", "/preview");
-  }
+  linkUjianTarget = decodedText;
 
   if (html5QrCode) {
     html5QrCode.stop().then(() => {
-      tampilkanLembarUjian(finalUrl);
+      document.getElementById("scan-area").style.display = "none";
+      document.getElementById("ready-area").style.display = "block";
+      document.getElementById("btn-launch").style.display = "block";
     }).catch(err => console.log(err));
   }
 }
 
-function tampilkanLembarUjian(urlGoogleForm) {
-  ujianDimulai = true;
-  document.getElementById("main-container").style.display = "none";
-  document.getElementById("exam-container").style.display = "block";
-  document.getElementById("exam-frame").src = urlGoogleForm;
-
-  masukModeFullScreen();
-
-  // Pasang jebakan keamanan (Aktif kembali karena di dalam iframe)
-  document.addEventListener("visibilitychange", sistemAntiNyontek);
-  window.addEventListener("blur", sistemAntiNyontek);
+function bukaTabSoal() {
+  // Tandai di memori bahwa ujian resmi dimulai
+  localStorage.setItem("ujian_active_ultimate", "true");
+  
+  // Buka Google Form di tab baru secara resmi dan bersih (Bebas Error Cookie!)
+  window.open(linkUjianTarget, '_blank');
 }
 
-function masukModeFullScreen() {
-  let el = document.documentElement;
-  if (el.requestFullscreen) el.requestFullscreen();
-  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
-  else if (el.msRequestFullscreen) el.msRequestFullscreen();
-}
-
-function sistemAntiNyontek() {
-  if (ujianDimulai) {
+// 🚨 DETECTOR KECURANGAN CERDAS (SISTEM SELISIH WAKTU)
+function tanganiPerubahanFokus() {
+  if (localStorage.getItem("ujian_active_ultimate") === "true") {
     if (document.hidden || !document.hasFocus()) {
-      document.getElementById("blocker").style.display = "block";
-      if (!alarmInterval) {
-        bunyikanSuaraPeringatan();
-        alarmInterval = setInterval(bunyikanSuaraPeringatan, 4000);
+      // Murid sedang berada di tab Google Form (Wajar), rekam waktu mulainya
+      waktuMeninggalkanHalaman = new Date().getTime();
+    } else {
+      // Murid kembali melihat halaman Exambro utama
+      let waktuKembali = new Date().getTime();
+      let selisihDetik = (waktuKembali - waktuMeninggalkanHalaman) / 1000;
+
+      // Jika mereka kembali ke halaman Exambro setelah lebih dari 10 detik,
+      // artinya mereka sengaja menutup tab ujian atau menekan tombol home/pindah aplikasi!
+      if (selisihDetik > 10) {
+        kunciLayarSiswa();
       }
     }
+  }
+}
+
+document.addEventListener("visibilitychange", tanganiPerubahanFokus);
+
+function kunciLayarSiswa() {
+  localStorage.setItem("exambro_locked_ultimate", "true");
+  document.getElementById("main-container").style.display = "none";
+  document.getElementById("blocker").style.display = "block";
+  
+  if (!alarmInterval) {
+    bunyikanSuaraPeringatan();
+    alarmInterval = setInterval(bunyikanSuaraPeringatan, 4000);
   }
 }
 
@@ -175,8 +188,15 @@ function bukaKunciPengawas() {
     clearInterval(alarmInterval);
     alarmInterval = null;
     window.speechSynthesis.cancel(); 
+    
+    localStorage.removeItem("exambro_locked_ultimate");
+    localStorage.removeItem("ujian_active_ultimate");
+    
     document.getElementById("blocker").style.display = "none";
-    masukModeFullScreen();
+    document.getElementById("scan-area").style.display = "block";
+    document.getElementById("ready-area").style.display = "none";
+    
+    location.reload(); // Ulangi scanner dari awal
   } else {
     alert("PIN Salah! Alarm akan tetap berbunyi.");
   }
