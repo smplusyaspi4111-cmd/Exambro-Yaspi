@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EXAMBRO YASPI SAFETY & ALARM</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 10px; text-align: center; -webkit-user-select: none; user-select: none; }
+    .container { max-width: 500px; margin: 10px auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { color: #1a3a5f; margin: 5px 0 15px 0; font-size: 18px; text-transform: uppercase; }
+    .btn-pasang { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 15px; display: none; }
+    
+    #reader { width: 100%; border-radius: 8px; overflow: hidden; background: #222; }
+    
+    /* Bingkai Google Form Ujian */
+    #exam-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; }
+    iframe { width: 100%; height: 100%; border: none; }
+    
+    /* 🚨 Layar Kunci Keamanan Merah */
+    #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #c00000; color: white; z-index: 10000; padding-top: 25%; box-sizing: border-box; }
+    #blocker h1 { font-size: 40px; margin: 0 0 10px 0; animation: pulse 1s infinite; }
+    #blocker p { font-size: 18px; padding: 0 20px; margin: 5px 0; }
+    .btn-admin { margin-top: 20px; padding: 12px 30px; background: white; color: #c00000; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+  </style>
+</head>
+<body>
+
+<!-- LAYAR TERKUNCI (SOAL TETAP AMAN DI BEKANG) -->
+<div id="blocker">
+  <h1>⚠️ LAYAR TERKUNCI!</h1>
+  <p>Terdeteksi keluar dari aplikasi ujian (sengaja atau tidak sengaja).</p>
+  <p style="font-weight: bold; background: rgba(0,0,0,0.2); display: inline-block; padding: 5px 15px; border-radius: 5px; margin-top: 10px;">
+    📢 ALARM AKTIF: SILAKAN LAPOR PENGAWAS!
+  </p>
+  <br>
+  <button class="btn-admin" onclick="bukaKunciPengawas()">🔓 Buka Kunci (Pengawas)</button>
+</div>
+
+<!-- CONTAINER UTAMA SCANNER -->
+<div class="container" id="main-container">
+  <button id="btn-install" class="btn-pasang">📲 PASANG EXAMBRO DI LAYAR HP</button>
+  <img src="https://i.ibb.co.com/yFbhLfRF/Logo-Yaspi.png" alt="Logo YASPI" style="width: 65px; height: auto;">
+  <h2>MENU SCAN SOAL UJIAN YASPI</h2>
+  <p style="font-weight: bold; color: #dc3545; font-size: 13px; margin-bottom: 15px;">
+    Arahkan kamera ke QR Code Soal yang disediakan Pengawas!
+  </p>
+  <div id="reader"></div>
+</div>
+
+<!-- CONTAINER GOOGLE FORM -->
+<div id="exam-container">
+  <iframe id="exam-frame" src=""></iframe>
+</div>
+
+<script>
+let deferredPrompt;
+let html5QrCode = null;
+let ujianDimulai = false;
+let alarmInterval = null;
+
+window.onload = function() {
+  mulaiKameraScanner();
+};
+
+// PWA Installer
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('btn-install').style.display = 'block';
+});
+
+document.getElementById('btn-install').addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('btn-install').style.display = 'none';
+  }
+});
+
+function mulaiKameraScanner() {
+  html5QrCode = new Html5Qrcode("reader");
+  const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+
+  Html5Qrcode.getCameras().then(devices => {
+    let cameraId = devices[0].id;
+    const backCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear') || d.label.toLowerCase().includes('environment'));
+    if (backCam) cameraId = backCam.id;
+    else if (devices.length > 1) cameraId = devices[devices.length - 1].id;
+
+    html5QrCode.start(cameraId, config, scanBerhasil, scanGagal).catch(err => {
+      html5QrCode.start({ facingMode: "environment" }, config, scanBerhasil, scanGagal);
+    });
+  }).catch(err => {
+    html5QrCode.start({ facingMode: "environment" }, config, scanBerhasil, scanGagal)
+      .catch(e => alert("Izin kamera ditolak atau tidak terdeteksi!"));
+  });
+}
+
+function scanGagal(error) {}
+
+function scanBerhasil(decodedText) {
+  if (!decodedText.startsWith("http://") && !decodedText.startsWith("https://")) {
+    alert("QR Code Salah! Ini bukan link ujian resmi YASPI.");
+    location.reload();
+    return;
+  }
+
+  if (html5QrCode) {
+    html5QrCode.stop().then(() => {
+      tampilkanLembarUjian(decodedText);
+    }).catch(err => console.log(err));
+  }
+}
+
+function tampilkanLembarUjian(urlGoogleForm) {
+  ujianDimulai = true;
+  document.getElementById("main-container").style.display = "none";
+  document.getElementById("exam-container").style.display = "block";
+  document.getElementById("exam-frame").src = urlGoogleForm;
+
+  masukModeFullScreen();
+
+  // Aktifkan sensor deteksi pindah tab / keluar aplikasi
+  document.addEventListener("visibilitychange", sistemAntiNyontek);
+  window.addEventListener("blur", sistemAntiNyontek);
+}
+
+function masukModeFullScreen() {
+  let el = document.documentElement;
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+  else if (el.msRequestFullscreen) el.msRequestFullscreen();
+}
+
+// 🚨 LOGIKA JEBAKAN KECURANGAN DAN ALARM SUARA
+function sistemAntiNyontek() {
+  if (ujianDimulai) {
+    if (document.hidden || !document.hasFocus()) {
+      // 1. Munculkan Tirai Pengunci Merah (Google Form di belakang aman, tidak dihancurkan)
+      document.getElementById("blocker").style.display = "block";
+      
+      // 2. Bunyikan Alarm Suara Robot secara berkala
+      if (!alarmInterval) {
+        bunyikanSuaraPeringatan(); // Bunyi langsung pertama kali
+        alarmInterval = setInterval(bunyikanSuaraPeringatan, 4000); // Ulangi setiap 4 detik
+      }
+    }
+  }
+}
+
+// Fungsi Google Text-to-Speech (Mengubah teks jadi suara Google Bahasa Indonesia)
+function bunyikanSuaraPeringatan() {
+  if ('speechSynthesis' in window) {
+    let pesan = new SpeechSynthesisUtterance("Peringatan! Keluar dari exambro Yaspi!");
+    pesan.lang = "id-ID"; // Format bahasa Indonesia murni
+    pesan.pitch = 1.2;    // Suara agak tinggi biar melengking terdengar pengawas
+    pesan.rate = 1.0;     // Kecepatan normal
+    window.speechSynthesis.speak(pesan);
+  }
+}
+
+// Blokir klik kanan
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// PEMBUKAAN KUNCI OLEH GURU/PENGAWAS
+function bukaKunciPengawas() {
+  let pin = prompt("Masukkan PIN PENGAWAS Ruangan:");
+  if (pin === "YASPI2026") {
+    // 1. Matikan Alarm Suara
+    clearInterval(alarmInterval);
+    alarmInterval = null;
+    window.speechSynthesis.cancel(); // Paksa matikan semua antrean suara Google
+    
+    // 2. Sembunyikan tirai pengunci merah
+    document.getElementById("blocker").style.display = "none";
+    
+    // 3. Kembalikan ke Fullscreen agar rapi kembali
+    masukModeFullScreen();
+  } else {
+    alert("PIN Salah! Alarm akan tetap berbunyi.");
+  }
+}
+</script>
+</body>
+</html>
