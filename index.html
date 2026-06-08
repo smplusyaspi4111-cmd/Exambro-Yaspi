@@ -54,8 +54,8 @@
   <p class="sub-title">Silakan pilih kelas Anda untuk melihat jadwal dan mulai ujian.</p>
 
   <div class="kelas-selection">
-    <button class="btn-kelas" onclick="pilihKelas('VII', this)">KELAS VII (7)</button>
-    <button class="btn-kelas" onclick="withDataCheck('VIII', this)">KELAS VIII (8)</button>
+    <button class="btn-kelas" onclick="pilihKelas('7', this)">KELAS VII (7)</button>
+    <button class="btn-kelas" onclick="pilihKelas('8', this)">KELAS VIII (8)</button>
   </div>
 
   <div id="status-loading">Sedang mengambil data roster ujian terbaru...</div>
@@ -64,7 +64,7 @@
 </div>
 
 <script>
-// 🛠️ LINK SPREADSHEET ASLI KAMU SUDAH BERADA DI TEMPAT YANG BENAR SEKARANG:
+// Link Spreadsheet Bersih dari file kamu
 const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGbMDc0aFb9CxkugUbfbVkcliIfnxNc/edit";
 
 let databaseRoster = [];
@@ -82,11 +82,10 @@ window.onload = function() {
 function muatDataDariSpreadsheet() {
   document.getElementById("status-loading").style.display = "block";
   
-  // Format konversi CSV yang bersih tanpa gangguan ekor link
   const urlRoster = SPREADSHEET_URL.split("/edit")[0] + '/gviz/tq?tqx=out:csv&sheet=roster';
   const urlSandi = SPREADSHEET_URL.split("/edit")[0] + '/gviz/tq?tqx=out:csv&sheet=sandi';
 
-  // Ambil data PIN
+  // Ambil Database Sandi
   fetch(urlSandi).then(res => res.text()).then(data => {
     let baris = data.split("\n");
     for(let i=1; i<baris.length; i++) {
@@ -99,7 +98,7 @@ function muatDataDariSpreadsheet() {
     }
   }).catch(e => console.log("Gagal memuat pin"));
 
-  // Ambil data Roster
+  // Ambil Database Roster
   fetch(urlRoster).then(res => res.text()).then(data => {
     document.getElementById("status-loading").style.display = "none";
     let baris = data.split("\n");
@@ -116,15 +115,11 @@ function muatDataDariSpreadsheet() {
       }
     }
   }).catch(err => {
-    document.getElementById("status-loading").innerText = "Gagal memuat database! Cek apakah spreadsheet sudah diset sebagai 'Pelihat untuk semua orang'.";
+    document.getElementById("status-loading").innerText = "Gagal memuat database!";
   });
 }
 
-function withDataCheck(romawiKelas, elemen) {
-  pilihKelas(romawiKelas, elemen);
-}
-
-function pilihKelas(romawiKelas, elemen) {
+function pilihKelas(angkaKelas, elemen) {
   document.querySelectorAll('.btn-kelas').forEach(btn => btn.classList.remove('active'));
   elemen.classList.add('active');
 
@@ -133,16 +128,16 @@ function pilihKelas(romawiKelas, elemen) {
 
   let hariList = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
   
-  // Jika database kosong karena proses fetch bermasalah
   if (databaseRoster.length === 0) {
-    kontainer.innerHTML = "<p style='color:red; text-align:center; padding:20px;'>Data belum siap atau gagal dimuat dari Google Sheets. Pastikan Spreadsheet sudah di-Share ke publik!</p>";
+    kontainer.innerHTML = "<p style='color:red; text-align:center; padding:20px;'>Data dari Google Sheets sedang dimuat atau gagal diakses. Pastikan setelan share sudah menjadi 'Pelihat'.</p>";
     return;
   }
   
   hariList.forEach(hari => {
+    // SEKARANG MENCARI BERDASARKAN ANGKA BENTUK "KELAS 7" ATAU "KELAS 8"
     let mapelHariIni = databaseRoster.filter(r => 
       r.hari.toLowerCase() === hari.toLowerCase() && 
-      r.mapel.toUpperCase().includes("KELAS " + romawiKelas)
+      r.mapel.toUpperCase().includes("KELAS " + angkaKelas)
     );
     
     if(mapelHariIni.length > 0) {
