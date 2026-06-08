@@ -25,8 +25,11 @@
     .mapel-info h4 { font-size: 14px; color: #1e293b; text-transform: uppercase; }
     .mapel-info p { font-size: 12px; color: #64748b; margin-top: 2px; }
     .btn-mulai { padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
+    
+    /* Status Loading */
+    #status-loading { color: #3b82f6; font-size: 14px; margin: 15px 0; font-weight: 500; }
 
-    /* 🚨 TIRAI MERAH PENGUNCI (SISTEM ANTI KECURANGAN) */
+    /* 🚨 TIRAI MERAH PENGUNCI */
     #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #b91c1c; color: white; z-index: 10000; padding: 20% 20px 0 20px; text-align: center; box-sizing: border-box; }
     #blocker h1 { font-size: 32px; margin-bottom: 15px; font-weight: bold; }
     #blocker p { font-size: 15px; margin-bottom: 5px; color: #fecaca; }
@@ -55,81 +58,99 @@
     <button class="btn-kelas" onclick="pilihKelas('8', this)">KELAS VIII (8)</button>
   </div>
 
+  <div id="status-loading">Memuat data ujian dari Google Sheets...</div>
+
   <div id="roster-container"></div>
 </div>
 
 <script>
-// 📋 REKAPAN DATA JADWAL INTERNAL (Silakan ganti teks 'LINK_FORM_DI_SINI' dengan link G-Form mapel terkait)
-const databaseRoster = [
-  // --- HARI SENIN ---
-  { hari: "Senin", mapel: "IPA - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Senin", mapel: "BAHASA INDONESIA - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Senin", mapel: "BAHASA INDONESIA - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  { hari: "Senin", mapel: "MATEMATIKA - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  
-  // --- HARI SELASA ---
-  { hari: "Selasa", mapel: "MATEMATIKA - Kelas 7", link: "https://forms.gle/oEyXTy8naqoB6mqVA" },
-  { hari: "Selasa", mapel: "PEND. AGAMA ISLAM - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Selasa", mapel: "PEND. AGAMA ISLAM - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  { hari: "Selasa", mapel: "PKN - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  
-  // --- HARI RABU ---
-  { hari: "Rabu", mapel: "PKN - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Rabu", mapel: "FIQIH IBADAH - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Rabu", mapel: "FIQIH IBADAH - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  { hari: "Rabu", mapel: "INFORMATIKA - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  
-  // --- HARI KAMIS ---
-  { hari: "Kamis", mapel: "BAHASA INGGRIS - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Kamis", mapel: "INFORMATIKA - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Kamis", mapel: "IPS - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  { hari: "Kamis", mapel: "SENI - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  
-  // --- HARI JUMAT ---
-  { hari: "Jumat", mapel: "IPS - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Jumat", mapel: "PENJASORKES - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Jumat", mapel: "PENJASORKES - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  { hari: "Jumat", mapel: "IPA - Kelas 8", link: "LINK_FORM_DI_SINI" },
-  
-  // --- HARI SABTU ---
-  { hari: "Sabtu", mapel: "SENI - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Sabtu", mapel: "BAHASA INGGRIS - Kelas 7", link: "LINK_FORM_DI_SINI" },
-  { hari: "Sabtu", mapel: "BAHASA INGGRIS - Kelas 8", link: "LINK_FORM_DI_SINI" }
-];
+// Link Google Spreadsheet Resmi milikmu
+const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGbMDc0aFb9CxkugUbfbVkcliIfnxNc/edit";
 
-// 🔑 DATABASE PIN SEBAGAI PENGUNCI (BISA KAMU UBAH DI SINI)
-const databaseSandi = {
-  "1": "YASPIAMAN",
-  "2": "JANGANCONTEK",
-  "3": "LALUIPENGAWAS",
-  "4": "JUJURLEBIHBAIK",
-  "5": "PINFINAL2026"
-};
-
+let databaseRoster = [];
+let databaseSandi = {};
 let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
 
 window.onload = function() {
   if (localStorage.getItem("yaspi_portal_locked") === "true") {
     kunciPortalSiswa();
+  } else {
+    ambilDataSpreadsheet();
   }
 };
 
+// Fungsi mengambil data langsung dari Kolom Spreadsheet tanpa simpan di kode HTML
+function ambilDataSpreadsheet() {
+  const base_url = SPREADSHEET_URL.split("/edit")[0];
+  const urlRoster = base_url + '/gviz/tq?tqx=out:csv&sheet=roster';
+  const urlSandi = base_url + '/gviz/tq?tqx=out:csv&sheet=sandi';
+
+  // 1. Ambil Data PIN Pengawas
+  fetch(urlSandi)
+    .then(res => res.text())
+    .then(text => {
+      let baris = text.split(/\r?\n/);
+      for(let i = 1; i < baris.length; i++) {
+        let kolom = baris[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        if(kolom.length >= 2) {
+          let noPel = kolom[0].replace(/"/g, '').trim();
+          let pin = kolom[1].replace(/"/g, '').trim().toUpperCase();
+          if(noPel) databaseSandi[noPel] = pin;
+        }
+      }
+    }).catch(err => console.log("Gagal memuat tab sandi"));
+
+  // 2. Ambil Data Roster dan Link Google Form
+  fetch(urlRoster)
+    .then(res => res.text())
+    .then(text => {
+      document.getElementById("status-loading").style.display = "none";
+      let baris = text.split(/\r?\n/);
+      databaseRoster = [];
+      
+      for(let i = 1; i < baris.length; i++) {
+        // Regex pengaman agar jika link berisi tanda koma tidak merusak struktur tabel
+        let kolom = baris[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        if(kolom.length >= 3) {
+          databaseRoster.push({
+            hari: kolom[0].replace(/"/g, '').trim(),
+            mapel: kolom[1].replace(/"/g, '').trim(),
+            link: kolom[2].replace(/"/g, '').trim()
+          });
+        }
+      }
+    })
+    .catch(err => {
+      document.getElementById("status-loading").innerText = "❌ Gagal menyambungkan ke Spreadsheet! Pastikan status Akses Umum sudah 'Siapa saja yang memiliki link'.";
+      document.getElementById("status-loading").style.color = "red";
+    });
+}
+
 function pilihKelas(angkaKelas, elemen) {
+  // Aktifkan style tombol yang ditekan
   document.querySelectorAll('.btn-kelas').forEach(btn => btn.classList.remove('active'));
   elemen.classList.add('active');
 
   let kontainer = document.getElementById("roster-container");
   kontainer.innerHTML = ""; 
 
+  if (databaseRoster.length === 0) {
+    kontainer.innerHTML = "<p style='color:#b91c1c; text-align:center; font-weight:bold; padding:15px;'>Data sedang diproses atau gagal dimuat. Tunggu sebentar lalu tekan kembali.</p>";
+    return;
+  }
+
   let hariList = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-  
+  let dataDitemukan = false;
+
   hariList.forEach(hari => {
+    // Filter otomatis mencari kata "Kelas 7" atau "Kelas 8" sesuai isi Spreadsheet kamu
     let mapelHariIni = databaseRoster.filter(r => 
       r.hari.toLowerCase() === hari.toLowerCase() && 
       r.mapel.toUpperCase().includes("KELAS " + angkaKelas)
     );
     
     if(mapelHariIni.length > 0) {
+      dataDitemukan = true;
       let areaHari = document.createElement("div");
       areaHari.className = "roster-area";
       areaHari.style.display = "block";
@@ -138,18 +159,31 @@ function pilihKelas(angkaKelas, elemen) {
       mapelHariIni.forEach(m => {
         let card = document.createElement("div");
         card.className = "mapel-card";
+        
+        // Cek apakah kolom link di spreadsheet diisi link asli atau masih tulisan "[Isi Link...]"
+        let tombolHtml = "";
+        if (m.link.startsWith("http")) {
+          tombolHtml = `<button class="btn-mulai" onclick="mulaiUjian('${m.link}')">MULAI</button>`;
+        } else {
+          tombolHtml = `<button class="btn-mulai" style="background:#94a3b8; cursor:not-allowed;" disabled>BELUM ADA LINK</button>`;
+        }
+
         card.innerHTML = `
           <div class="mapel-info">
             <h4>${m.mapel}</h4>
             <p>Klik tombol untuk meluncur ke lembar ujian Google Form.</p>
           </div>
-          <button class="btn-mulai" onclick="mulaiUjian('${m.link}')">MULAI</button>
+          ${tombolHtml}
         `;
         areaHari.appendChild(card);
       });
       kontainer.appendChild(areaHari);
     }
   });
+
+  if (!dataDitemukan) {
+    kontainer.innerHTML = "<p style='text-align:center; color:#64748b; padding:20px;'>Jadwal untuk kelas ini tidak ditemukan di spreadsheet.</p>";
+  }
 }
 
 function mulaiUjian(linkGoogleForm) {
