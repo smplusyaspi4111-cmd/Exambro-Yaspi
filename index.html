@@ -1,200 +1,213 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>EXAMBRO YASPI ULTIMATE FIX</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <title>PORTAL UJIAN DIGITAL YASPI</title>
   <style>
-    body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 10px; text-align: center; -webkit-user-select: none; user-select: none; }
-    .container { max-width: 500px; margin: 10px auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    h2 { color: #1a3a5f; margin: 5px 0 15px 0; font-size: 18px; text-transform: uppercase; }
-    .btn-pasang { width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; margin-bottom: 15px; display: none; }
-    .btn-mulai { width: 100%; padding: 15px; background-color: #1a3a5f; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; color: #1e293b; padding: 15px; }
+    .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; }
+    img.logo { width: 70px; height: auto; margin-bottom: 10px; }
+    h2 { color: #1e3a8a; font-size: 20px; text-transform: uppercase; margin-bottom: 5px; }
+    .sub-title { font-size: 13px; color: #64748b; margin-bottom: 20px; }
     
-    #reader { width: 100%; border-radius: 8px; overflow: hidden; background: #222; }
+    /* Navigasi Kelas */
+    .kelas-selection { display: flex; gap: 15px; margin-bottom: 20px; justify-content: center; }
+    .btn-kelas { flex: 1; max-width: 200px; padding: 14px; font-weight: bold; font-size: 16px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+    .btn-kelas.active { background: #1e3a8a; color: white; }
     
-    /* 🚨 Layar Kunci Keamanan Merah */
-    #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #c00000; color: white; z-index: 10000; padding-top: 25%; box-sizing: border-box; }
-    #blocker h1 { font-size: 40px; margin: 0 0 10px 0; animation: pulse 1s infinite; }
-    #blocker p { font-size: 18px; padding: 0 20px; margin: 5px 0; }
-    .btn-admin { margin-top: 20px; padding: 12px 30px; background: white; color: #c00000; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    /* Tabel Roster */
+    .roster-area { display: none; margin-top: 15px; text-align: left; }
+    .roster-title { font-weight: bold; color: #0f172a; margin-bottom: 10px; border-left: 4px solid #1e3a8a; padding-left: 8px; font-size: 15px; }
+    .mapel-card { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .mapel-info { flex: 1; padding-right: 10px; }
+    .mapel-info h4 { font-size: 14px; color: #1e293b; text-transform: uppercase; }
+    .mapel-info p { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .btn-mulai { padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
     
-    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    /* Loading status */
+    #status-loading { color: #3b82f6; font-size: 14px; margin: 15px 0; display: none; }
+
+    /* 🚨 TIRAI MERAH PENGUNCI (SISTEM COUNTER BREAK) */
+    #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #b91c1c; color: white; z-index: 10000; padding: 20% 20px 0 20px; text-align: center; box-sizing: border-box; }
+    #blocker h1 { font-size: 32px; margin-bottom: 15px; font-weight: bold; }
+    #blocker p { font-size: 15px; margin-bottom: 5px; color: #fecaca; }
+    .btn-unlock { margin-top: 25px; padding: 12px 35px; background: white; color: #b91c1c; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
   </style>
 </head>
 <body>
 
 <div id="blocker">
-  <h1>⚠️ LAYAR TERKUNCI!</h1>
-  <p>Anda terdeteksi keluar dari area ujian (Membuka aplikasi lain / Mencontek).</p>
-  <p style="font-weight: bold; background: rgba(0,0,0,0.2); display: inline-block; padding: 5px 15px; border-radius: 5px; margin-top: 10px;">
-    📢 ALARM AKTIF: SILAKAN LAPOR PENGAWAS!
+  <h1 id="lock-title">⚠️ AKURASI UJIAN TERKUNCI</h1>
+  <p id="lock-desc">Terdeteksi keluar dari Google Form ujian untuk membuka aplikasi lain!</p>
+  <p style="font-weight: bold; background: rgba(0,0,0,0.2); display: inline-block; padding: 6px 15px; border-radius: 6px; margin-top: 15px;" id="lock-count">
+    Pelanggaran Ke: 0
   </p>
   <br>
-  <button class="btn-admin" onclick="bukaKunciPengawas()">🔓 Buka Kunci (Pengawas)</button>
+  <button class="btn-unlock" onclick="bukaKunciPengawas()">🔓 Buka Kunci (Masukkan PIN Pengawas)</button>
 </div>
 
-<div class="container" id="main-container">
-  <button id="btn-install" class="btn-pasang">📲 PASANG EXAMBRO DI LAYAR HP</button>
-  <img src="https://i.ibb.co.com/yFbhLfRF/Logo-Yaspi.png" alt="Logo YASPI" style="width: 65px; height: auto;">
-  <h2>MENU SCAN SOAL UJIAN YASPI</h2>
-  
-  <div id="scan-area">
-    <p style="font-weight: bold; color: #dc3545; font-size: 13px; margin-bottom: 15px;">
-      Arahkan kamera ke QR Code Soal yang disediakan Pengawas!
-    </p>
-    <div id="reader"></div>
+<div class="container" id="main-portal">
+  <img src="https://i.ibb.co.com/yFbhLfRF/Logo-Yaspi.png" alt="Logo YASPI" class="logo">
+  <h2>PORTAL ROSTER UJIAN YASPI</h2>
+  <p class="sub-title">Silakan pilih kelas Anda untuk melihat jadwal dan mulai ujian.</p>
+
+  <div class="kelas-selection">
+    <button class="btn-kelas" onclick="pilihKelas('VII', this)">KELAS VII (7)</button>
+    <button class="btn-kelas" onclick="pilihKelas('VIII', this)">KELAS VIII (8)</button>
   </div>
 
-  <div id="ready-area" style="display:none;">
-    <p style="color: #28a745; font-weight: bold; font-size: 15px;">✅ SOAL BERHASIL DIDETEKSI!</p>
-    <p style="font-size: 13px; color: #666;">Klik tombol di bawah untuk membuka soal. Jangan menutup tab Exambro ini selama ujian berlangsung!</p>
-    <button class="btn-mulai" id="btn-launch" onclick="bukaTabSoal()">🚀 MASUK KE LEMBAR UJIAN</button>
-  </div>
+  <div id="status-loading">Sedang mengambil data roster ujian terbaru...</div>
+
+  <div id="roster-container"></div>
 </div>
 
 <script>
-let deferredPrompt;
-let html5QrCode = null;
-let alarmInterval = null;
-let linkUjianTarget = "";
+// 🛠️ MASUKKAN LINK GOOGLE SPREADSHEET KAMU YANG SUDAH DI-SHARE DI SINI:
+const SPREADSHEET_URL = "URL_SPREADSHEET_KAMU_DI_SINI";
+
+let databaseRoster = [];
+let databaseSandi = {};
+let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
 
 window.onload = function() {
-  // Cek apakah HP siswa dalam status terhukum/terkunci sebelumnya
-  if (localStorage.getItem("exambro_locked_ultimate") === "true") {
-    kunciLayarSiswa();
+  if (localStorage.getItem("yaspi_portal_locked") === "true") {
+    kunciPortalSiswa();
   } else {
-    mulaiKameraScanner();
+    muatDataDariSpreadsheet();
   }
 };
 
-// PWA Installer (Tombol Tambahkan ke Layar Utama)
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  document.getElementById('btn-install').style.display = 'block';
-});
+function muatDataDariSpreadsheet() {
+  if(SPREADSHEET_URL === "URL_SPREADSHEET_KAMU_DI_SINI") return;
+  
+  document.getElementById("status-loading").style.display = "block";
+  
+  const urlRoster = SPREADSHEET_URL.replace(/\/edit.*/, '/gviz/tq?tqx=out:csv&sheet=roster');
+  const urlSandi = SPREADSHEET_URL.replace(/\/edit.*/, '/gviz/tq?tqx=out:csv&sheet=sandi');
 
-document.getElementById('btn-install').addEventListener('click', async () => {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    document.getElementById('btn-install').style.display = 'none';
-  }
-});
+  // Load Database Sandi PIN
+  fetch(urlSandi).then(res => res.text()).then(data => {
+    let baris = data.split("\n");
+    for(let i=1; i<baris.length; i++) {
+      let kolom = baris[i].split(",");
+      if(kolom.length >= 2) {
+        let noPelanggaran = kolom[0].replace(/"/g, '').trim();
+        let pinCode = kolom[1].replace(/"/g, '').trim().toUpperCase();
+        databaseSandi[noPelanggaran] = pinCode;
+      }
+    }
+  });
 
-function mulaiKameraScanner() {
-  html5QrCode = new Html5Qrcode("reader");
-  const config = { fps: 15, qrbox: { width: 250, height: 250 } };
-
-  Html5Qrcode.getCameras().then(devices => {
-    let cameraId = devices[0].id;
-    const backCam = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('rear') || d.label.toLowerCase().includes('environment'));
-    if (backCam) cameraId = backCam.id;
-    else if (devices.length > 1) cameraId = devices[devices.length - 1].id;
-
-    html5QrCode.start(cameraId, config, scanBerhasil, scanGagal).catch(err => {
-      html5QrCode.start({ facingMode: "environment" }, config, scanBerhasil, scanGagal);
-    });
+  // Load Database Roster
+  fetch(urlRoster).then(res => res.text()).then(data => {
+    document.getElementById("status-loading").style.display = "none";
+    let baris = data.split("\n");
+    databaseRoster = [];
+    
+    for(let i=1; i<baris.length; i++) {
+      let kolom = baris[i].split(",");
+      if(kolom.length >= 3) {
+        databaseRoster.push({
+          hari: kolom[0].replace(/"/g, '').trim(),
+          mapel: kolom[1].replace(/"/g, '').trim(),
+          link: kolom[2].replace(/"/g, '').trim()
+        });
+      }
+    }
   }).catch(err => {
-    html5QrCode.start({ facingMode: "environment" }, config, scanBerhasil, scanGagal)
-      .catch(e => alert("Izin kamera ditolak atau tidak terdeteksi!"));
+    document.getElementById("status-loading").innerText = "Gagal memuat database! Cek setelan Share Spreadsheet.";
   });
 }
 
-function scanGagal(error) {}
+function pilihKelas(romawiKelas, elemen) {
+  document.querySelectorAll('.btn-kelas').forEach(btn => btn.classList.remove('active'));
+  elemen.classList.add('active');
 
-function scanBerhasil(decodedText) {
-  if (!decodedText.startsWith("http://") && !decodedText.startsWith("https://")) {
-    alert("QR Code Salah! Ini bukan link ujian resmi YASPI.");
-    location.reload();
-    return;
-  }
+  let kontainer = document.getElementById("roster-container");
+  kontainer.innerHTML = ""; 
 
-  linkUjianTarget = decodedText;
-
-  if (html5QrCode) {
-    html5QrCode.stop().then(() => {
-      document.getElementById("scan-area").style.display = "none";
-      document.getElementById("ready-area").style.display = "block";
-      document.getElementById("btn-launch").style.display = "block";
-    }).catch(err => console.log(err));
-  }
-}
-
-function bukaTabSoal() {
-  // Aktifkan mode penjagaan ketat di memori browser HP
-  localStorage.setItem("ujian_active_ultimate", "true");
+  let hariList = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
   
-  // Buka Google Form di tab baru (Murni, lancar, bebas eror cookie)
-  window.open(linkUjianTarget, '_blank');
+  hariList.forEach(hari => {
+    // Membaca kata kunci romawi (contoh: "Kelas VII" atau "Kelas VIII") di dalam kolom spreadsheet
+    let mapelHariIni = databaseRoster.filter(r => 
+      r.hari.toLowerCase() === hari.toLowerCase() && 
+      r.mapel.toUpperCase().includes("KELAS " + romawiKelas)
+    );
+    
+    if(mapelHariIni.length > 0) {
+      let areaHari = document.createElement("div");
+      areaHari.className = "roster-area";
+      areaHari.style.display = "block";
+      areaHari.innerHTML = `<div class="roster-title">📅 Hari ${hari}</div>`;
+      
+      mapelHariIni.forEach(m => {
+        let card = document.createElement("div");
+        card.className = "mapel-card";
+        card.innerHTML = `
+          <div class="mapel-info">
+            <h4>${m.mapel}</h4>
+            <p>Klik tombol untuk meluncur ke lembar ujian Google Form.</p>
+          </div>
+          <button class="btn-mulai" onclick="mulaiUjian('${m.link}')">MULAI</button>
+        `;
+        areaHari.appendChild(card);
+      });
+      kontainer.appendChild(areaHari);
+    }
+  });
 }
 
-// 🚨 DETEKSI KECURANGAN: JIKA SISWA KELUAR DARI CHROME/BROWSER KESELURUHAN (HOME / WA)
+function mulaiUjian(linkGoogleForm) {
+  localStorage.setItem("yaspi_ujian_running", "true");
+  window.open(linkGoogleForm, '_blank');
+}
+
+// 🚨 RADAR SENSOR KECURANGAN
 window.addEventListener("blur", function() {
-  if (localStorage.getItem("ujian_active_ultimate") === "true") {
-    // Jeda aman 1 detik untuk memastikan akurasi data fokus layar browser
+  if (localStorage.getItem("yaspi_ujian_running") === "true") {
     setTimeout(function() {
       if (!document.hasFocus()) {
-        kunciLayarSiswa();
+        countKeluar++;
+        localStorage.setItem("yaspi_cheat_count", countKeluar);
+        kunciPortalSiswa();
       }
-    }, 1000);
+    }, 1200); 
   }
 });
 
-function kunciLayarSiswa() {
-  localStorage.setItem("exambro_locked_ultimate", "true");
-  document.getElementById("main-container").style.display = "none";
+function kunciPortalSiswa() {
+  localStorage.setItem("yaspi_portal_locked", "true");
+  document.getElementById("main-portal").style.display = "none";
   document.getElementById("blocker").style.display = "block";
-  
-  // Jalankan alarm suara berulang setiap 4 detik
-  if (!alarmInterval) {
-    bunyikanSuaraPeringatan();
-    alarmInterval = setInterval(bunyikanSuaraPeringatan, 4000);
-  }
+  document.getElementById("lock-count").innerText = "Pelanggaran Ke: " + countKeluar;
 }
 
-function bunyikanSuaraPeringatan() {
-  if ('speechSynthesis' in window) {
-    let pesan = new SpeechSynthesisUtterance("Peringatan! Keluar dari exambro Yaspi!");
-    pesan.lang = "id-ID";
-    pesan.pitch = 1.2;
-    pesan.rate = 1.0;
-    window.speechSynthesis.speak(pesan);
-  }
-}
-
-document.addEventListener("contextmenu", e => e.preventDefault());
-
-// PEMBUKAAN KUNCI OLEH PENGAWAS (ANTI SALAH KETIK PIN)
 function bukaKunciPengawas() {
-  let inputPin = prompt("Masukkan PIN PENGAWAS Ruangan:");
+  let inputPin = prompt("🚨 PELANGGARAN TERDETEKSI!\nMasukkan PIN PENGAWAS Ruangan Ke-" + countKeluar + ":");
   if (inputPin === null) return;
 
-  // Bersihkan spasi tak sengaja dan ubah ke huruf kapital semua otomatis
   let pinBersih = inputPin.trim().toUpperCase();
+  let pinTargetSah = databaseSandi[countKeluar.toString()];
 
-  if (pinBersih === "YASPI2026") {
-    // Matikan alarm total
-    clearInterval(alarmInterval);
-    alarmInterval = null;
-    window.speechSynthesis.cancel(); 
+  if (!pinTargetSah) {
+    let keys = Object.keys(databaseSandi);
+    pinTargetSah = databaseSandi[keys[keys.length - 1]];
+  }
+
+  if (pinBersih === pinTargetSah) {
+    localStorage.removeItem("yaspi_portal_locked");
+    localStorage.removeItem("yaspi_ujian_running"); 
     
-    // Hapus status hukuman di memori HP
-    localStorage.removeItem("exambro_locked_ultimate");
-    localStorage.removeItem("ujian_active_ultimate");
-    
-    // Kembalikan tampilan ke menu scanner awal
     document.getElementById("blocker").style.display = "none";
-    document.getElementById("main-container").style.display = "block";
-    document.getElementById("scan-area").style.display = "block";
-    document.getElementById("ready-area").style.display = "none";
+    document.getElementById("main-portal").style.display = "block";
     
-    location.reload(); // Segarkan halaman agar kamera aktif kembali
+    alert("Kunci berhasil dibuka! Silakan minta siswa masuk kembali ke lembar soal.");
+    location.reload();
   } else {
-    alert("PIN Salah! Alarm akan tetap berbunyi.");
+    alert("❌ PIN SALAH!\nPIN tidak cocok dengan database.");
   }
 }
 </script>
