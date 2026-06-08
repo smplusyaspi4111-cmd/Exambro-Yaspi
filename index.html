@@ -38,7 +38,6 @@
     #blocker p { font-size: 15px; margin-bottom: 5px; color: #fecaca; }
     .btn-unlock { margin-top: 25px; padding: 12px 35px; background: white; color: #b91c1c; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 100%; max-width: 320px; }
     
-    /* Tombol Rahasia Reset Manual Pengawas */
     .btn-reset-opsional { margin-top: 40px; display: inline-block; background: transparent; color: #fca5a5; border: 1px dashed #fca5a5; padding: 6px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; text-decoration: none; opacity: 0.7; }
   </style>
 </head>
@@ -78,7 +77,6 @@ const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGb
 
 let databaseRoster = [];
 let databaseSandi = {};
-let maxSandiIndex = 1;
 let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
 
 window.onload = function() {
@@ -117,8 +115,6 @@ function ambilDataSpreadsheet() {
           let pin = kolom[1].replace(/"/g, '').trim().toUpperCase();
           if(noPel) {
             databaseSandi[noPel] = pin;
-            let idx = parseInt(noPel);
-            if(!isNaN(idx) && idx > maxSandiIndex) maxSandiIndex = idx;
           }
         }
       }
@@ -237,41 +233,40 @@ function kunciPortalSiswa() {
   document.getElementById("blocker").style.display = "block";
   document.getElementById("lock-count").innerText = "Pelanggaran Ke: " + countKeluar;
   
-  // Mencari index sandi target yang valid
-  let targetIndex = countKeluar;
-  if (targetIndex > maxSandiIndex) targetIndex = maxSandiIndex;
+  // KUNCI MANUAL JELAS: Jika lewat dari pelanggaran 5, tetap minta baris 5
+  let targetSandiKolom = countKeluar;
+  if (targetSandiKolom > 5) targetSandiKolom = 5;
   
-  document.getElementById("info-pin-ke").innerText = "(Gunakan PIN Pengawas Untuk Baris Ke-" + targetIndex + ")";
+  document.getElementById("info-pin-ke").innerText = "(Gunakan PIN Pengawas Untuk Baris Ke-" + targetSandiKolom + ")";
 }
 
 function bukaKunciPengawas() {
-  let targetIndex = countKeluar;
-  if (targetIndex > maxSandiIndex) targetIndex = maxSandiIndex;
+  let targetSandiKolom = countKeluar;
+  if (targetSandiKolom > 5) targetSandiKolom = 5;
 
-  let inputPin = prompt("🚨 VERIFIKASI PENGAWAS\nMasukkan PIN Pengawas untuk Baris Ke-" + targetIndex + ":");
+  let inputPin = prompt("🚨 VERIFIKASI PENGAWAS\nMasukkan PIN Pengawas untuk Baris Ke-" + targetSandiKolom + ":");
   if (inputPin === null) return;
 
   let pinBersih = inputPin.trim().toUpperCase();
-  let pinTargetSah = databaseSandi[targetIndex.toString()];
+  let pinTargetSah = databaseSandi[targetSandiKolom.toString()];
 
   if (pinBersih === pinTargetSah) {
-    // 🔒 BUKA KUNCI TANPA RESET RIWAYAT ANGKA KE 0 (Sesuai Permintaan Fiam)
+    // 🔒 BUKA KUNCI DAN TETAP PERTAHANKAN ANGKA AKUMULATIF (Sesuai Permintaan Fiam!)
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running"); 
     
     document.getElementById("blocker").style.display = "none";
     document.getElementById("main-portal").style.display = "block";
     
-    alert("Akses dibuka kembali! Hitungan pelanggaran tetap tersimpan di perangkat.");
+    alert("Akses dibuka kembali!");
     location.reload();
   } else {
     alert("❌ PIN SALAH!");
   }
 }
 
-// Fitur Tambahan: Reset manual oleh pengawas jika berganti siswa/sesi ujian baru
 function resetPelanggaranManual() {
-  let konfirmasi = prompt("⚙️ RESET RIWAYAT PERANGKAT\nMasukkan PIN Ke-1 (" + databaseSandi["1"] ? "Untuk Verifikasi" : "PIN UTAMA" + ") jika ingin mengosongkan riwayat pelanggaran HP ini:");
+  let konfirmasi = prompt("⚙️ RESET RIWAYAT PERANGKAT\nMasukkan PIN Ke-1 (yaspiaman) jika ingin mengosongkan riwayat pelanggaran HP ini murni ke awal:");
   if (konfirmasi === null) return;
   
   if (konfirmasi.trim().toUpperCase() === databaseSandi["1"]) {
