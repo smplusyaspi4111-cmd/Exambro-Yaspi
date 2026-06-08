@@ -24,7 +24,11 @@
     .mapel-info { flex: 1; padding-right: 10px; }
     .mapel-info h4 { font-size: 14px; color: #1e293b; text-transform: uppercase; }
     .mapel-info p { font-size: 12px; color: #64748b; margin-top: 2px; }
-    .btn-mulai { padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
+    
+    /* Desain Tombol Mulai */
+    .btn-mulai { padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; transition: background 0.3s; }
+    /* Warna kuning jika sudah pernah dikerjakan siswa */
+    .btn-mulai.sudah-dikerjakan { background: #f59e0b; color: white; }
     
     /* Tombol Kembali */
     .btn-kembali { display: none; width: 100%; max-width: 150px; margin: 20px auto 0 auto; padding: 10px; background: #64748b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
@@ -38,7 +42,6 @@
     #blocker p { font-size: 15px; margin-bottom: 5px; color: #fecaca; }
     .btn-unlock { margin-top: 25px; padding: 12px 35px; background: white; color: #b91c1c; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 100%; max-width: 320px; }
     
-    /* Tombol reset tersembunyi secara default */
     .btn-reset-opsional { display: none; margin-top: 40px; background: transparent; color: #fca5a5; border: 1px dashed #fca5a5; padding: 6px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; text-decoration: none; opacity: 0.7; margin-left: auto; margin-right: auto; }
   </style>
 </head>
@@ -102,8 +105,6 @@ function deteksiDanPisahKolom(barisTeks) {
 
 function ambilDataSpreadsheet() {
   const base_url = SPREADSHEET_URL.split("/edit")[0];
-  
-  // ⚡ TRIK ANTI-CACHE: Menambahkan tanda waktu acak (?cb=...) agar HP dipaksa selalu mengambil data murni dari internet
   const penandaWaktu = new Date().getTime();
   const urlRoster = base_url + '/gviz/tq?tqx=out:csv&sheet=roster&cb=' + penandaWaktu;
   const urlSandi = base_url + '/gviz/tq?tqx=out:csv&sheet=sandi&cb=' + penandaWaktu;
@@ -112,7 +113,7 @@ function ambilDataSpreadsheet() {
     .then(res => res.text())
     .then(text => {
       let baris = text.split(/\r?\n/);
-      databaseSandi = {}; // Kosongkan dulu untuk pengisian ulang bersih
+      databaseSandi = {}; 
       for(let i = 1; i < baris.length; i++) {
         let kolom = deteksiDanPisahKolom(baris[i]);
         if(kolom.length >= 2) {
@@ -162,12 +163,14 @@ function pilihKelas(targetKelas, elemen) {
     return;
   }
 
-  let hariList = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  // Mengambil daftar hari unik yang tersedia secara dinamis langsung dari spreadsheet
+  let daftarHariUnik = [...new Set(databaseRoster.map(r => r.hari))];
+
   let dataDitemukan = false;
 
-  hariList.forEach(hari => {
+  daftarHariUnik.forEach(hariTeks => {
     let mapelHariIni = databaseRoster.filter(r => 
-      r.hari.toLowerCase() === hari.toLowerCase() && 
+      r.hari.toLowerCase() === hariTeks.toLowerCase() && 
       r.kelas.toString().trim() === targetKelas.toString().trim()
     );
     
@@ -176,15 +179,26 @@ function pilihKelas(targetKelas, elemen) {
       let areaHari = document.createElement("div");
       areaHari.className = "roster-area";
       areaHari.style.display = "block";
-      areaHari.innerHTML = `<div class="roster-title">📅 Hari ${hari}</div>`;
+      
+      // Membaca teks hari dan tanggal murni dari kolom spreadsheet kamu
+      areaHari.innerHTML = `<div class="roster-title">📅 Hari ${hariTeks}</div>`;
       
       mapelHariIni.forEach(m => {
         let card = document.createElement("div");
         card.className = "mapel-card";
         
+        // Cek memori lokal apakah mapel ini sudah pernah dibuka oleh siswa di HP tersebut
+        let kunciMemoriLokal = "sudah_buka_" + targetKelas + "_" + m.mapel.replace(/\s+/g, '_');
+        let statusSudahDikerjakan = localStorage.getItem(kunciMemoriLokal) === "true";
+        
         let tombolHtml = "";
         if (m.link.startsWith("http")) {
-          tombolHtml = `<button class="btn-mulai" onclick="mulaiUjian('${m.link}')">MULAI</button>`;
+          if (statusSudahDikerjakan) {
+            // Jika sudah diklik, tambahkan kelas warna kuning (.sudah-dikerjakan)
+            tombolHtml = `<button class="btn-mulai sudah-dikerjakan" onclick="mulaiUjian('${m.link}', '${kunciMemoriLokal}')">MULAI</button>`;
+          } else {
+            tombolHtml = `<button class="btn-mulai" onclick="mulaiUjian('${m.link}', '${kunciMemoriLokal}')">MULAI</button>`;
+          }
         } else {
           tombolHtml = `<button class="btn-mulai" style="background:#94a3b8; cursor:not-allowed;" disabled>BELUM ADA LINK</button>`;
         }
@@ -192,7 +206,7 @@ function pilihKelas(targetKelas, elemen) {
         card.innerHTML = `
           <div class="mapel-info">
             <h4>${m.mapel}</h4>
-            <p>Klik mulai untuk membuka lembar Google Form ujian.</p>
+            <p>${statusSudahDikerjakan ? "Selesai dikerjakan (Dapat diulang)." : "Klik mulai untuk membuka lembar Google Form ujian."}</p>
           </div>
           ${tombolHtml}
         `;
@@ -215,9 +229,15 @@ function kembaliKeMenuUtama() {
   document.getElementById("btn-back-main").style.display = "none";
 }
 
-function mulaiUjian(linkGoogleForm) {
+function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
+  // Simpan penanda bahwa tombol mapel ini sudah diklik ke kuning
+  localStorage.setItem(kunciMemoriLokal, "true");
+  
   localStorage.setItem("yaspi_ujian_running", "true");
   window.open(linkGoogleForm, '_blank');
+  
+  // Muat ulang pelan di latar belakang agar warna tombol langsung berubah jadi kuning saat tirai merah menutup/terbuka nanti
+  setTimeout(() => { location.reload(); }, 500);
 }
 
 window.addEventListener("blur", function() {
@@ -243,14 +263,12 @@ function kunciPortalSiswa() {
   
   document.getElementById("info-pin-ke").innerText = "(Gunakan PIN Pengawas Untuk Baris Ke-" + targetSandiKolom + ")";
   
-  // 🔐 ATURAN FIAM: Tombol reset hanya boleh muncul jika sudah pelanggaran ke-5 atau lebih
   if (countKeluar >= 5) {
     document.getElementById("tombol-reset-rahasia").style.display = "inline-block";
   } else {
     document.getElementById("tombol-reset-rahasia").style.display = "none";
   }
   
-  // Tarik ulang data spreadsheet secara langsung saat layar terkunci demi keakuratan
   ambilDataSpreadsheet();
 }
 
@@ -264,7 +282,6 @@ function bukaKunciPengawas() {
   let pinBersih = inputPin.trim().toUpperCase();
   let pinTargetSah = databaseSandi[targetSandiKolom.toString()];
 
-  // Murni mencocokkan dengan data spreadsheet, tanpa ada backup teks rahasia lagi
   if (pinTargetSah && pinBersih === pinTargetSah) {
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running"); 
@@ -291,7 +308,10 @@ function resetPelanggaranManual() {
   
   if (konfirmasi.trim().toUpperCase() === pinSatu) {
     countKeluar = 0;
-    localStorage.clear();
+    // Bersihkan riwayat kunci tapi pertahankan riwayat tombol kuning agar tidak hilang
+    localStorage.removeItem("yaspi_cheat_count");
+    localStorage.removeItem("yaspi_portal_locked");
+    localStorage.removeItem("yaspi_ujian_running");
     alert("🔄 Sukses! Seluruh riwayat pelanggaran HP ini telah dibersihkan murni ke 0.");
     location.reload();
   } else {
