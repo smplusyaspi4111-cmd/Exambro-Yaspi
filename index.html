@@ -33,10 +33,13 @@
     #status-loading { color: #3b82f6; font-size: 14px; margin: 15px 0; font-weight: 500; }
 
     /* 🚨 TIRAI MERAH PENGUNCI */
-    #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #b91c1c; color: white; z-index: 10000; padding: 20% 20px 0 20px; text-align: center; box-sizing: border-box; }
+    #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #b91c1c; color: white; z-index: 10000; padding: 15% 20px 0 20px; text-align: center; box-sizing: border-box; }
     #blocker h1 { font-size: 32px; margin-bottom: 15px; font-weight: bold; }
     #blocker p { font-size: 15px; margin-bottom: 5px; color: #fecaca; }
-    .btn-unlock { margin-top: 25px; padding: 12px 35px; background: white; color: #b91c1c; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .btn-unlock { margin-top: 25px; padding: 12px 35px; background: white; color: #b91c1c; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 100%; max-width: 320px; }
+    
+    /* Tombol Rahasia Reset Manual Pengawas */
+    .btn-reset-opsional { margin-top: 40px; display: inline-block; background: transparent; color: #fca5a5; border: 1px dashed #fca5a5; padding: 6px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; text-decoration: none; opacity: 0.7; }
   </style>
 </head>
 <body>
@@ -48,7 +51,9 @@
     Pelanggaran Ke: 0
   </p>
   <br>
-  <button class="btn-unlock" onclick="bukaKunciPengawas()">🔓 Buka Kunci<br><span id="info-pin-ke" style="font-size:12px; font-weight:normal; opacity:0.9;"></span></button>
+  <button class="btn-unlock" onclick="bukaKunciPengawas()">🔓 Buka Kunci<br><span id="info-pin-ke" style="font-size:11px; font-weight:normal; opacity:0.85;"></span></button>
+  <br>
+  <button class="btn-reset-opsional" onclick="resetPelanggaranManual()">⚙️ Pengawas: Reset Hitangan Ke 0</button>
 </div>
 
 <div class="container" id="main-portal">
@@ -73,6 +78,7 @@ const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGb
 
 let databaseRoster = [];
 let databaseSandi = {};
+let maxSandiIndex = 1;
 let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
 
 window.onload = function() {
@@ -90,12 +96,9 @@ function deteksiDanPisahKolom(barisTeks) {
     let hitungTitikKoma = (barisTeks.match(/;/g) || []).length;
     if (hitungTitikKoma > hitungKoma) karakterPemisah = ";";
   }
-  
-  if (karakterPemisah === ",") {
-    return barisTeks.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-  } else {
-    return barisTeks.split(/;(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-  }
+  return karakterPemisah === "," 
+    ? barisTeks.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+    : barisTeks.split(/;(?=(?:(?:[^"]*"){2})*[^"]*$)/);
 }
 
 function ambilDataSpreadsheet() {
@@ -103,7 +106,6 @@ function ambilDataSpreadsheet() {
   const urlRoster = base_url + '/gviz/tq?tqx=out:csv&sheet=roster';
   const urlSandi = base_url + '/gviz/tq?tqx=out:csv&sheet=sandi';
 
-  // 1. Ambil PIN Pengawas (Otomatis dikonversi ke huruf kapital di memori sistem agar adil)
   fetch(urlSandi)
     .then(res => res.text())
     .then(text => {
@@ -113,12 +115,15 @@ function ambilDataSpreadsheet() {
         if(kolom.length >= 2) {
           let noPel = kolom[0].replace(/"/g, '').trim();
           let pin = kolom[1].replace(/"/g, '').trim().toUpperCase();
-          if(noPel) databaseSandi[noPel] = pin;
+          if(noPel) {
+            databaseSandi[noPel] = pin;
+            let idx = parseInt(noPel);
+            if(!isNaN(idx) && idx > maxSandiIndex) maxSandiIndex = idx;
+          }
         }
       }
     }).catch(err => console.log("Gagal memuat tab sandi"));
 
-  // 2. Ambil Roster
   fetch(urlRoster)
     .then(res => res.text())
     .then(text => {
@@ -152,7 +157,7 @@ function pilihKelas(targetKelas, elemen) {
   kontainer.innerHTML = ""; 
 
   if (databaseRoster.length === 0) {
-    kontainer.innerHTML = "<p style='color:#b91c1c; text-align:center; font-weight:bold; padding:15px;'>Data sedang dimuat, ketuk ulang dalam 3 detik...</p>";
+    kontainer.innerHTML = "<p style='color:#b91c1c; text-align:center; font-weight:bold; padding:15px;'>Data sedang dimuat, ketuk ulang...</p>";
     return;
   }
 
@@ -232,34 +237,50 @@ function kunciPortalSiswa() {
   document.getElementById("blocker").style.display = "block";
   document.getElementById("lock-count").innerText = "Pelanggaran Ke: " + countKeluar;
   
-  // Update Teks Pelanggaran Ke-X agar informatif
-  document.getElementById("info-pin-ke").innerText = "(Masukkan PIN Pengawas Ruangan Untuk Pelanggaran Ke-" + countKeluar + ")";
+  // Mencari index sandi target yang valid
+  let targetIndex = countKeluar;
+  if (targetIndex > maxSandiIndex) targetIndex = maxSandiIndex;
+  
+  document.getElementById("info-pin-ke").innerText = "(Gunakan PIN Pengawas Untuk Baris Ke-" + targetIndex + ")";
 }
 
 function bukaKunciPengawas() {
-  let inputPin = prompt("🚨 PELANGGARAN TERDETEKSI!\nMasukkan PIN PENGAWAS Ruangan Untuk Pelanggaran Ke-" + countKeluar + ":");
+  let targetIndex = countKeluar;
+  if (targetIndex > maxSandiIndex) targetIndex = maxSandiIndex;
+
+  let inputPin = prompt("🚨 VERIFIKASI PENGAWAS\nMasukkan PIN Pengawas untuk Baris Ke-" + targetIndex + ":");
   if (inputPin === null) return;
 
-  // Kebal Huruf Kecil: Input diubah otomatis ke huruf besar agar cocok dengan memori
   let pinBersih = inputPin.trim().toUpperCase();
-  let pinTargetSah = databaseSandi[countKeluar.toString()];
-
-  if (!pinTargetSah) {
-    let keys = Object.keys(databaseSandi);
-    pinTargetSah = databaseSandi[keys[keys.length - 1]];
-  }
+  let pinTargetSah = databaseSandi[targetIndex.toString()];
 
   if (pinBersih === pinTargetSah) {
+    // 🔒 BUKA KUNCI TANPA RESET RIWAYAT ANGKA KE 0 (Sesuai Permintaan Fiam)
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running"); 
     
     document.getElementById("blocker").style.display = "none";
     document.getElementById("main-portal").style.display = "block";
     
-    alert("Kunci berhasil dibuka! Silakan minta siswa masuk kembali.");
+    alert("Akses dibuka kembali! Hitungan pelanggaran tetap tersimpan di perangkat.");
     location.reload();
   } else {
     alert("❌ PIN SALAH!");
+  }
+}
+
+// Fitur Tambahan: Reset manual oleh pengawas jika berganti siswa/sesi ujian baru
+function resetPelanggaranManual() {
+  let konfirmasi = prompt("⚙️ RESET RIWAYAT PERANGKAT\nMasukkan PIN Ke-1 (" + databaseSandi["1"] ? "Untuk Verifikasi" : "PIN UTAMA" + ") jika ingin mengosongkan riwayat pelanggaran HP ini:");
+  if (konfirmasi === null) return;
+  
+  if (konfirmasi.trim().toUpperCase() === databaseSandi["1"]) {
+    countKeluar = 0;
+    localStorage.clear();
+    alert("🔄 Sukses! Seluruh riwayat pelanggaran HP ini telah dibersihkan murni ke 0.");
+    location.reload();
+  } else {
+    alert("❌ Otorisasi Gagal! PIN Salah.");
   }
 }
 </script>
