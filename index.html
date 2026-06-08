@@ -54,8 +54,8 @@
   <p class="sub-title">Silakan pilih kelas Anda untuk melihat jadwal dan mulai ujian.</p>
 
   <div class="kelas-selection">
-    <button class="btn-kelas" onclick="pilihKelas('7', this)">KELAS VII (7)</button>
-    <button class="btn-kelas" onclick="pilihKelas('8', this)">KELAS VIII (8)</button>
+    <button class="btn-kelas" onclick="pilihKelas('7', this)">Kelas 7</button>
+    <button class="btn-kelas" onclick="pilihKelas('8', this)">Kelas 8</button>
   </div>
 
   <div id="status-loading">Memuat data ujian dari Google Sheets...</div>
@@ -98,7 +98,7 @@ function ambilDataSpreadsheet() {
       }
     }).catch(err => console.log("Gagal memuat tab sandi"));
 
-  // 2. Ambil Roster Berdasarkan Formasi 4 Kolom Baru (A: Hari, B: Kelas, C: Mapel, D: Link)
+  // 2. Ambil Roster 4 Kolom Baru (A: Hari, B: Kelas, C: Mapel, D: Link)
   fetch(urlRoster)
     .then(res => res.text())
     .then(text => {
@@ -107,13 +107,13 @@ function ambilDataSpreadsheet() {
       databaseRoster = [];
       
       for(let i = 1; i < baris.length; i++) {
-        let kolom = baris[i].split(/,(?=(?:(?:[^"]*"){2})*[^微"]*$)/);
+        let kolom = baris[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
         if(kolom.length >= 4) {
           databaseRoster.push({
             hari: kolom[0].replace(/"/g, '').trim(),
-            kelas: kolom[1].replace(/"/g, '').trim(), // Membaca Kolom B (Kelas)
-            mapel: kolom[2].replace(/"/g, '').trim(), // Membaca Kolom C (Mapel)
-            link: kolom[3].replace(/"/g, '').trim()   // Membaca Kolom D (Link)
+            kelas: kolom[1].replace(/"/g, '').trim(), // Kolom B
+            mapel: kolom[2].replace(/"/g, '').trim(), // Kolom C
+            link: kolom[3].replace(/"/g, '').trim()   // Kolom D
           });
         }
       }
@@ -140,10 +140,10 @@ function pilihKelas(targetKelas, elemen) {
   let dataDitemukan = false;
 
   hariList.forEach(hari => {
-    // COCOKAN LANGSUNG DENGAN KOLOM B SPREADSHEET (Mencari angka '7' atau '8')
+    // Mencocokkan langsung karakter string murni dari Kolom B
     let mapelHariIni = databaseRoster.filter(r => 
       r.hari.toLowerCase() === hari.toLowerCase() && 
-      r.kelas === targetKelas
+      r.kelas.toString().trim() === targetKelas.toString().trim()
     );
     
     if(mapelHariIni.length > 0) {
@@ -178,7 +178,7 @@ function pilihKelas(targetKelas, elemen) {
   });
 
   if (!dataDitemukan) {
-    kontainer.innerHTML = "<p style='text-align:center; color:#64748b; padding:20px;'>Jadwal ujian kelas ini belum tersedia atau format penulisan salah.</p>";
+    kontainer.innerHTML = "<p style='text-align:center; color:#64748b; padding:20px;'>Jadwal kelas ini tidak ditemukan di spreadsheet.</p>";
   }
 }
 
