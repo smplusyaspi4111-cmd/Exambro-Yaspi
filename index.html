@@ -87,7 +87,7 @@ let databaseRoster = [];
 let databaseSandi = {};
 let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
 let sudahBersuara = false; 
-let timerPelanggaran = null; // Wadah untuk menampung jeda waktu toleransi
+let timerPelanggaran = null; 
 
 window.onload = function() {
   if (localStorage.getItem("yaspi_portal_locked") === "true") {
@@ -259,24 +259,21 @@ function logoutUjianSelesai() {
   }
 }
 
-// ⏱️ PROSES VALIDASI DETEKSI: Memberi jeda toleransi aman selama 3 detik sebelum mengunci resmi
 function pemicuKunciDenganSabar() {
   if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_portal_locked") !== "true") {
     if (!timerPelanggaran) {
       timerPelanggaran = setTimeout(function() {
-        // Jika setelah 3 detik murid tetap tidak memfokuskan layar kembali, kunci resmi diaktifkan
         if (document.hidden || !document.hasFocus()) {
           countKeluar++;
           localStorage.setItem("yaspi_cheat_count", countKeluar);
           kunciPortalSiswa();
         }
         timerPelanggaran = null;
-      }, 3000); // 3000 milidetik = 3 detik toleransi loading
+      }, 3000); 
     }
   }
 }
 
-// Pembatal kunci otomatis jika murid langsung kembali kurang dari 3 detik
 function batalkanTimerPelanggaran() {
   if (timerPelanggaran) {
     clearTimeout(timerPelanggaran);
@@ -312,19 +309,25 @@ function kunciPortalSiswa() {
     document.getElementById("tombol-reset-rahasia").style.display = "none";
   }
 
-  // 🔊 ALARM MEREPET PEREMPUAN: Kecepatan dinaikkan (rate=1.4) & Diulang 3 kali mirip sirine kebakaran
+  // 🔊 UPDATE ALARM SUARA PEREMPUAN: Memanggil Bu Putri!
   if (!sudahBersuara) {
-    let teksMerepet = "Eitss kamu ketahuan! Eitss kamu ketahuan! Eitss kamu ketahuan!";
+    // Kata-kata pesanan khusus dari Fiam
+    let teksMerepet = "bu Putriii ada yg mau nyonteeek. bu Putriii ada yg mau nyonteeek. bu Putriii ada yg mau nyonteeek.";
     let ucapan = new SpeechSynthesisUtterance(teksMerepet);
     
-    // Mencari preferensi suara perempuan lokal Indonesia di browser
-    let daftarSuara = window.speechSynthesis.getVoices();
-    let suaraPerempuan = daftarSuara.find(v => v.lang.includes("id") && v.name.toLowerCase().includes("female"));
-    if (suaraPerempuan) ucapan.voice = suaraPerempuan;
-
     ucapan.lang = "id-ID"; 
-    ucapan.rate = 1.4;     // Merepet cepat bak alarm kebakaran!
-    ucapan.pitch = 1.2;    // Nada melengking khas wanita
+    ucapan.rate = 1.35;    // Kecepatan dipercepat biar merepet panik
+    ucapan.pitch = 1.6;    // Nada dinaikkan tinggi agar dipaksa menjadi lengkingan wanita cempreng
+
+    // Paksa sistem Android mencari database suara wanita Indonesia
+    if (typeof speechSynthesis !== 'undefined' && window.speechSynthesis.getVoices) {
+      let daftarSuara = window.speechSynthesis.getVoices();
+      let suaraPerempuanId = daftarSuara.find(v => v.lang.includes("id") && (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("perempuan") || v.name.toLowerCase().includes("zira") || v.name.toLowerCase().includes("indonesia")));
+      if (suaraPerempuanId) {
+        ucapan.voice = suaraPerempuanId;
+      }
+    }
+
     window.speechSynthesis.speak(ucapan);
     sudahBersuara = true;  
   }
@@ -382,7 +385,7 @@ function resetPelanggaranManual() {
   }
 }
 
-// Memicu pemuatan daftar suara di beberapa browser HP Android agar tidak kosong saat dipanggil pertama kali
+// Mengaktifkan pemicu suara di latar belakang Android
 if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
   speechSynthesis.onvoiceschanged = window.speechSynthesis.getVoices;
 }
