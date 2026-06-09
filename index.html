@@ -88,6 +88,7 @@ let databaseSandi = {};
 let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
 let sudahBersuara = false; 
 let timerPelanggaran = null; 
+let siapLacak = false; // Flag status pengaman baru
 
 window.onload = function() {
   if (localStorage.getItem("yaspi_portal_locked") === "true") {
@@ -95,6 +96,10 @@ window.onload = function() {
   } else {
     ambilDataSpreadsheet();
     aturVisibilitasTombolLogout();
+    // Jika halaman dimuat ulang dan status ujian masih jalan, langsung aktifkan lacak
+    if (localStorage.getItem("yaspi_ujian_running") === "true") {
+      siapLacak = true;
+    }
   }
 };
 
@@ -107,7 +112,7 @@ function deteksiDanPisahKolom(barisTeks) {
   }
   return karakterPemisah === "," 
     ? barisTeks.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
-    : barisTeks.split(/;(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+    : barisTeks.split(/;(?=(?:(?:[^"]*"){2})*[^**"]*$)/);
 }
 
 function ambilDataSpreadsheet() {
@@ -236,9 +241,16 @@ function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
   localStorage.setItem(kunciMemoriLokal, "true");
   localStorage.setItem("yaspi_ujian_running", "true");
   sudahBersuara = false; 
+  siapLacak = false; // Matikan radar sementara pas loading tab baru
   
-  // 🛠️ FIX UTAMA: Buka di jendela murni halaman yang sama (_self) agar browser tidak bingung kehilangan fokus tab
-  window.open(linkGoogleForm, '_self');
+  // 🚀 TRICK HP: Buka di tab baru agar interaksi direkam browser secara sah
+  window.open(linkGoogleForm, '_blank');
+  
+  // Berikan waktu gencatan senjata 7 detik bagi HP untuk loading GForm, lalu kunci radar
+  setTimeout(function() {
+    siapLacak = true;
+    location.reload(); // Refresh halaman portal di latar belakang untuk mengaktifkan status siaga penuh
+  }, 7000);
 }
 
 function aturVisibilitasTombolLogout() {
@@ -260,7 +272,8 @@ function logoutUjianSelesai() {
 }
 
 function pemicuKunciDenganSabar() {
-  if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_portal_locked") !== "true") {
+  // Hanya kunci jika ujian sedang jalan dan masa gencatan senjata (7 detik) sudah lewat
+  if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_portal_locked") !== "true" && siapLacak === true) {
     if (!timerPelanggaran) {
       timerPelanggaran = setTimeout(function() {
         if (document.hidden || !document.hasFocus()) {
@@ -346,6 +359,7 @@ function bukaKunciPengawas() {
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running"); 
     sudahBersuara = false;
+    siapLacak = false;
     batalkanTimerPelanggaran();
     
     document.getElementById("blocker").style.display = "none";
@@ -371,6 +385,7 @@ function resetPelanggaranManual() {
   if (konfirmasi.trim().toUpperCase() === pinSatu) {
     countKeluar = 0;
     sudahBersuara = false;
+    siapLacak = false;
     batalkanTimerPelanggaran();
     localStorage.removeItem("yaspi_cheat_count");
     localStorage.removeItem("yaspi_portal_locked");
