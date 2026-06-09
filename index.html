@@ -98,6 +98,7 @@ let databaseSandi = {};
 let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
 let sudahBersuara = false; 
 let timerPelanggaran = null; 
+let radarSiapAktif = false; // 🛡️ Saklar pengaman deteksi palsu
 
 window.onload = function() {
   if (localStorage.getItem("yaspi_portal_locked") === "true") {
@@ -115,7 +116,7 @@ function deteksiDanPisahKolom(barisTeks) {
   if (barisTeks.includes(";")) {
     let hitungKoma = (barisTeks.match(/,/g) || []).length;
     let hitungTitikKoma = (barisTeks.match(/;/g) || []).length;
-    if (hitungTitikKoma > hitungKoma) karakterPoisah = ";";
+    if (hitungTitikKoma > hitungKoma) karakterPemisah = ";";
   }
   return karakterPemisah === "," 
     ? barisTeks.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
@@ -247,6 +248,7 @@ function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
   localStorage.setItem("yaspi_ujian_running", "true");
   localStorage.setItem("yaspi_current_link", linkGoogleForm);
   sudahBersuara = false; 
+  radarSiapAktif = false; // Matikan radar dulu sementara
   
   bukaIframeUjian(linkGoogleForm);
 }
@@ -256,11 +258,17 @@ function bukaIframeUjian(urlForm) {
   document.getElementById("exam-wrapper").style.display = "block";
   document.getElementById("bar-logout-siswa").style.display = "block";
   document.getElementById("exam-frame").src = urlForm;
+
+  // 🛡️ JEDA AMAN MAKSIMAL: Beri waktu 20 detik (20000ms) agar pengalihan akun internal iframe selesai sempurna
+  setTimeout(function() {
+    radarSiapAktif = true;
+  }, 20000);
 }
 
 function logoutUjianSelesai() {
   let konfirmasi = confirm("Apakah Anda sudah benar-benar selesai mengirimkan jawaban di Google Form dan ingin keluar secara resmi?");
   if (konfirmasi) {
+    radarSiapAktif = false;
     localStorage.removeItem("yaspi_ujian_running");
     localStorage.removeItem("yaspi_current_link");
     alert("Logout Berhasil! Terima kasih sudah mengikuti ujian dengan jujur di YASPI.");
@@ -268,10 +276,9 @@ function logoutUjianSelesai() {
   }
 }
 
-// 🚨 PERBAIKAN UTAMA: Buang fungsi blur/focus. Hanya lacak status TERSEMBUNYI NYATA (tekan tombol Home / buka WA)
 function cekKecuranganSiswa() {
-  if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_portal_locked") !== "true") {
-    if (document.hidden) { // Hanya aktif jika halaman murni menghilang dari layar HP
+  if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_portal_locked") !== "true" && radarSiapAktif === true) {
+    if (document.hidden) { 
       if (!timerPelanggaran) {
         timerPelanggaran = setTimeout(function() {
           if (document.hidden) { 
@@ -293,7 +300,6 @@ function batalkanTimer() {
   }
 }
 
-// Hanya menggunakan Visibility Change agar toleran terhadap sentuhan di dalam iframe Google Form
 document.addEventListener("visibilitychange", function() {
   if (document.hidden) {
     cekKecuranganSiswa();
@@ -304,9 +310,12 @@ document.addEventListener("visibilitychange", function() {
 
 function kunciPortalSiswa() {
   localStorage.setItem("yaspi_portal_locked", "true");
-  document.getElementById("main-portal").style.display = "none";
+  radarSiapAktif = false;
+  
+  document.getElementById("exam-frame").src = "";
   document.getElementById("exam-wrapper").style.display = "none";
   document.getElementById("bar-logout-siswa").style.display = "none";
+  document.getElementById("main-portal").style.display = "none";
   
   document.getElementById("blocker").style.display = "block";
   document.getElementById("lock-count").innerText = "Pelanggaran Ke: " + countKeluar;
@@ -360,6 +369,7 @@ function bukaKunciPengawas() {
     localStorage.removeItem("yaspi_ujian_running"); 
     localStorage.removeItem("yaspi_current_link");
     sudahBersuara = false;
+    radarSiapAktif = false;
     batalkanTimer();
     
     document.getElementById("blocker").style.display = "none";
@@ -385,6 +395,7 @@ function resetPelanggaranManual() {
   if (konfirmasi.trim().toUpperCase() === pinSatu) {
     countKeluar = 0;
     sudahBersuara = false;
+    radarSiapAktif = false;
     batalkanTimer();
     localStorage.removeItem("yaspi_cheat_count");
     localStorage.removeItem("yaspi_portal_locked");
