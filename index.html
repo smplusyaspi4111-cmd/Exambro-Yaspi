@@ -104,7 +104,6 @@ window.onload = function() {
     kunciPortalSiswa();
   } else {
     ambilDataSpreadsheet();
-    // Cek jika siswa menyegarkan halaman di tengah-tengah ujian berjalan
     if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_current_link")) {
       bukaIframeUjian(localStorage.getItem("yaspi_current_link"));
     }
@@ -116,7 +115,7 @@ function deteksiDanPisahKolom(barisTeks) {
   if (barisTeks.includes(";")) {
     let hitungKoma = (barisTeks.match(/,/g) || []).length;
     let hitungTitikKoma = (barisTeks.match(/;/g) || []).length;
-    if (hitungTitikKoma > hitungKoma) karakterPemisah = ";";
+    if (hitungTitikKoma > hitungKoma) karakterPoisah = ";";
   }
   return karakterPemisah === "," 
     ? barisTeks.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
@@ -269,15 +268,17 @@ function logoutUjianSelesai() {
   }
 }
 
-// 🚨 RADAR ANTI-CONTEK AKTIF 100% KARENA HALAMAN PORTAL TETAP STANDBY
+// 🚨 PERBAIKAN UTAMA: Buang fungsi blur/focus. Hanya lacak status TERSEMBUNYI NYATA (tekan tombol Home / buka WA)
 function cekKecuranganSiswa() {
   if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_portal_locked") !== "true") {
-    if (document.hidden || !document.hasFocus()) {
+    if (document.hidden) { // Hanya aktif jika halaman murni menghilang dari layar HP
       if (!timerPelanggaran) {
         timerPelanggaran = setTimeout(function() {
-          countKeluar++;
-          localStorage.setItem("yaspi_cheat_count", countKeluar);
-          kunciPortalSiswa();
+          if (document.hidden) { 
+            countKeluar++;
+            localStorage.setItem("yaspi_cheat_count", countKeluar);
+            kunciPortalSiswa();
+          }
           timerPelanggaran = null;
         }, 3000); 
       }
@@ -292,6 +293,7 @@ function batalkanTimer() {
   }
 }
 
+// Hanya menggunakan Visibility Change agar toleran terhadap sentuhan di dalam iframe Google Form
 document.addEventListener("visibilitychange", function() {
   if (document.hidden) {
     cekKecuranganSiswa();
@@ -299,8 +301,6 @@ document.addEventListener("visibilitychange", function() {
     batalkanTimer();
   }
 });
-window.addEventListener("blur", cekKecuranganSiswa);
-window.addEventListener("focus", batalkanTimer);
 
 function kunciPortalSiswa() {
   localStorage.setItem("yaspi_portal_locked", "true");
