@@ -27,11 +27,13 @@
     
     /* Desain Tombol Mulai */
     .btn-mulai { padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; transition: background 0.3s; }
-    /* Warna kuning jika sudah pernah dikerjakan siswa */
     .btn-mulai.sudah-dikerjakan { background: #f59e0b; color: white; }
     
-    /* Tombol Kembali */
+    /* Tombol Navigasi Bawah */
     .btn-kembali { display: none; width: 100%; max-width: 150px; margin: 20px auto 0 auto; padding: 10px; background: #64748b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
+    
+    /* 🚪 TOMBOL LOGOUT AMAN */
+    .btn-logout { display: none; width: 100%; max-width: 250px; margin: 25px auto 0 auto; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
 
     /* Status Loading */
     #status-loading { color: #3b82f6; font-size: 14px; margin: 15px 0; font-weight: 500; }
@@ -61,7 +63,7 @@
 
 <div class="container" id="main-portal">
   <img src="https://i.ibb.co.com/yFbhLfRF/Logo-Yaspi.png" alt="Logo YASPI" class="logo">
-  <h2>PORTAL ROSTER UJIAN YASPI</h2>
+  <h2>PORTAL UJIAN DIGITAL YASPI</h2>
   <p class="sub-title">Silakan pilih kelas Anda untuk melihat jadwal dan mulai ujian.</p>
 
   <div class="kelas-selection" id="menu-kelas-utama">
@@ -73,6 +75,8 @@
 
   <div id="roster-container"></div>
   
+  <button class="btn-logout" id="btn-logout-resmi" onclick="logoutUjianSelesai()">🚪 SELESAI UJIAN & LOGOUT</button>
+  
   <button class="btn-kembali" id="btn-back-main" onclick="kembaliKeMenuUtama()">⬅️ KEMBALI</button>
 </div>
 
@@ -82,12 +86,14 @@ const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGb
 let databaseRoster = [];
 let databaseSandi = {};
 let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
+let sudahBersuara = false; 
 
 window.onload = function() {
   if (localStorage.getItem("yaspi_portal_locked") === "true") {
     kunciPortalSiswa();
   } else {
     ambilDataSpreadsheet();
+    aturVisibilitasTombolLogout();
   }
 };
 
@@ -177,7 +183,6 @@ function pilihKelas(targetKelas, elemen) {
       let areaHari = document.createElement("div");
       areaHari.className = "roster-area";
       areaHari.style.display = "block";
-      
       areaHari.innerHTML = `<div class="roster-title">📅 ${hariTeks}</div>`;
       
       mapelHariIni.forEach(m => {
@@ -216,31 +221,64 @@ function pilihKelas(targetKelas, elemen) {
   }
 
   document.getElementById("btn-back-main").style.display = "block";
+  aturVisibilitasTombolLogout();
 }
 
 function kembaliKeMenuUtama() {
   document.getElementById("roster-container").innerHTML = "";
   document.querySelectorAll('.btn-kelas').forEach(btn => btn.classList.remove('active'));
   document.getElementById("btn-back-main").style.display = "none";
+  aturVisibilitasTombolLogout();
 }
 
 function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
   localStorage.setItem(kunciMemoriLokal, "true");
   localStorage.setItem("yaspi_ujian_running", "true");
+  sudahBersuara = false; 
   window.open(linkGoogleForm, '_blank');
   
   setTimeout(() => { location.reload(); }, 500);
 }
 
+function aturVisibilitasTombolLogout() {
+  const tombolLogout = document.getElementById("btn-logout-resmi");
+  // Tombol logout resmi hanya muncul jika status ujian sedang berjalan aktif di latar belakang
+  if (localStorage.getItem("yaspi_ujian_running") === "true") {
+    tombolLogout.style.display = "block";
+  } else {
+    tombolLogout.style.display = "none";
+  }
+}
+
+// 🚪 FUNGSI LOGOUT RESMI JALUR AMAN
+function logoutUjianSelesai() {
+  let konfirmasi = confirm("Apakah Anda sudah benar-benar selesai mengirimkan jawaban di Google Form dan ingin keluar secara resmi?");
+  if (konfirmasi) {
+    // Matikan status ujian berjalan secara aman tanpa memicu tirai merah
+    localStorage.removeItem("yaspi_ujian_running");
+    alert("Logout Berhasil! Terima kasih sudah mengikuti ujian dengan jujur di YASPI. Silakan beristirahat.");
+    location.reload(); // Muat ulang halaman ke kondisi portal bersih semula
+  }
+}
+
+// 🛡️ DETEKSI KETAT HOME / RECENT APPS
+document.addEventListener("visibilitychange", function() {
+  if (document.hidden && localStorage.getItem("yaspi_ujian_running") === "true") {
+    countKeluar++;
+    localStorage.setItem("yaspi_cheat_count", countKeluar);
+    kunciPortalSiswa();
+  }
+});
+
 window.addEventListener("blur", function() {
   if (localStorage.getItem("yaspi_ujian_running") === "true") {
     setTimeout(function() {
-      if (!document.hasFocus()) {
+      if (!document.hasFocus() && localStorage.getItem("yaspi_portal_locked") !== "true") {
         countKeluar++;
         localStorage.setItem("yaspi_cheat_count", countKeluar);
         kunciPortalSiswa();
       }
-    }, 1200); 
+    }, 500); 
   }
 });
 
@@ -260,6 +298,14 @@ function kunciPortalSiswa() {
   } else {
     document.getElementById("tombol-reset-rahasia").style.display = "none";
   }
+
+  if (!sudahBersuara) {
+    let ucapan = new SpeechSynthesisUtterance("eitss kamu ketahuan");
+    ucapan.lang = "id-ID"; 
+    ucapan.rate = 1.0;     
+    window.speechSynthesis.speak(ucapan);
+    sudahBersuara = true;  
+  }
   
   ambilDataSpreadsheet();
 }
@@ -277,6 +323,7 @@ function bukaKunciPengawas() {
   if (pinTargetSah && pinBersih === pinTargetSah) {
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running"); 
+    sudahBersuara = false;
     
     document.getElementById("blocker").style.display = "none";
     document.getElementById("main-portal").style.display = "block";
@@ -298,8 +345,9 @@ function resetPelanggaranManual() {
   let konfirmasi = prompt("⚙️ RESET RIWAYAT PERANGKAT\nMasukkan PIN Ke-1 jika ingin mengosongkan riwayat pelanggaran HP ini murni ke awal:");
   if (konfirmasi === null) return;
   
-  if (konfirmasi.trim().toUpperCase() === pinSatu) {
+  if (confrimasi.trim().toUpperCase() === pinSatu) {
     countKeluar = 0;
+    sudahBersuara = false;
     localStorage.removeItem("yaspi_cheat_count");
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running");
