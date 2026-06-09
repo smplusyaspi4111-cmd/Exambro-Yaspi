@@ -87,6 +87,7 @@ let databaseRoster = [];
 let databaseSandi = {};
 let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
 let sudahBersuara = false; 
+let timerPelanggaran = null; // Wadah untuk menampung jeda waktu toleransi
 
 window.onload = function() {
   if (localStorage.getItem("yaspi_portal_locked") === "true") {
@@ -242,7 +243,6 @@ function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
 
 function aturVisibilitasTombolLogout() {
   const tombolLogout = document.getElementById("btn-logout-resmi");
-  // Tombol logout resmi hanya muncul jika status ujian sedang berjalan aktif di latar belakang
   if (localStorage.getItem("yaspi_ujian_running") === "true") {
     tombolLogout.style.display = "block";
   } else {
@@ -250,37 +250,50 @@ function aturVisibilitasTombolLogout() {
   }
 }
 
-// 🚪 FUNGSI LOGOUT RESMI JALUR AMAN
 function logoutUjianSelesai() {
   let konfirmasi = confirm("Apakah Anda sudah benar-benar selesai mengirimkan jawaban di Google Form dan ingin keluar secara resmi?");
   if (konfirmasi) {
-    // Matikan status ujian berjalan secara aman tanpa memicu tirai merah
     localStorage.removeItem("yaspi_ujian_running");
     alert("Logout Berhasil! Terima kasih sudah mengikuti ujian dengan jujur di YASPI. Silakan beristirahat.");
-    location.reload(); // Muat ulang halaman ke kondisi portal bersih semula
+    location.reload(); 
   }
 }
 
-// 🛡️ DETEKSI KETAT HOME / RECENT APPS
+// ⏱️ PROSES VALIDASI DETEKSI: Memberi jeda toleransi aman selama 3 detik sebelum mengunci resmi
+function pemicuKunciDenganSabar() {
+  if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_portal_locked") !== "true") {
+    if (!timerPelanggaran) {
+      timerPelanggaran = setTimeout(function() {
+        // Jika setelah 3 detik murid tetap tidak memfokuskan layar kembali, kunci resmi diaktifkan
+        if (document.hidden || !document.hasFocus()) {
+          countKeluar++;
+          localStorage.setItem("yaspi_cheat_count", countKeluar);
+          kunciPortalSiswa();
+        }
+        timerPelanggaran = null;
+      }, 3000); // 3000 milidetik = 3 detik toleransi loading
+    }
+  }
+}
+
+// Pembatal kunci otomatis jika murid langsung kembali kurang dari 3 detik
+function batalkanTimerPelanggaran() {
+  if (timerPelanggaran) {
+    clearTimeout(timerPelanggaran);
+    timerPelanggaran = null;
+  }
+}
+
 document.addEventListener("visibilitychange", function() {
-  if (document.hidden && localStorage.getItem("yaspi_ujian_running") === "true") {
-    countKeluar++;
-    localStorage.setItem("yaspi_cheat_count", countKeluar);
-    kunciPortalSiswa();
+  if (document.hidden) {
+    pemicuKunciDenganSabar();
+  } else {
+    batalkanTimerPelanggaran();
   }
 });
 
-window.addEventListener("blur", function() {
-  if (localStorage.getItem("yaspi_ujian_running") === "true") {
-    setTimeout(function() {
-      if (!document.hasFocus() && localStorage.getItem("yaspi_portal_locked") !== "true") {
-        countKeluar++;
-        localStorage.setItem("yaspi_cheat_count", countKeluar);
-        kunciPortalSiswa();
-      }
-    }, 500); 
-  }
-});
+window.addEventListener("blur", pemicuKunciDenganSabar);
+window.addEventListener("focus", batalkanTimerPelanggaran);
 
 function kunciPortalSiswa() {
   localStorage.setItem("yaspi_portal_locked", "true");
@@ -299,10 +312,19 @@ function kunciPortalSiswa() {
     document.getElementById("tombol-reset-rahasia").style.display = "none";
   }
 
+  // 🔊 ALARM MEREPET PEREMPUAN: Kecepatan dinaikkan (rate=1.4) & Diulang 3 kali mirip sirine kebakaran
   if (!sudahBersuara) {
-    let ucapan = new SpeechSynthesisUtterance("eitss kamu ketahuan");
+    let teksMerepet = "Eitss kamu ketahuan! Eitss kamu ketahuan! Eitss kamu ketahuan!";
+    let ucapan = new SpeechSynthesisUtterance(teksMerepet);
+    
+    // Mencari preferensi suara perempuan lokal Indonesia di browser
+    let daftarSuara = window.speechSynthesis.getVoices();
+    let suaraPerempuan = daftarSuara.find(v => v.lang.includes("id") && v.name.toLowerCase().includes("female"));
+    if (suaraPerempuan) ucapan.voice = suaraPerempuan;
+
     ucapan.lang = "id-ID"; 
-    ucapan.rate = 1.0;     
+    ucapan.rate = 1.4;     // Merepet cepat bak alarm kebakaran!
+    ucapan.pitch = 1.2;    // Nada melengking khas wanita
     window.speechSynthesis.speak(ucapan);
     sudahBersuara = true;  
   }
@@ -324,6 +346,7 @@ function bukaKunciPengawas() {
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running"); 
     sudahBersuara = false;
+    batalkanTimerPelanggaran();
     
     document.getElementById("blocker").style.display = "none";
     document.getElementById("main-portal").style.display = "block";
@@ -345,9 +368,10 @@ function resetPelanggaranManual() {
   let konfirmasi = prompt("⚙️ RESET RIWAYAT PERANGKAT\nMasukkan PIN Ke-1 jika ingin mengosongkan riwayat pelanggaran HP ini murni ke awal:");
   if (konfirmasi === null) return;
   
-  if (confrimasi.trim().toUpperCase() === pinSatu) {
+  if (konfirmasi.trim().toUpperCase() === pinSatu) {
     countKeluar = 0;
     sudahBersuara = false;
+    batalkanTimerPelanggaran();
     localStorage.removeItem("yaspi_cheat_count");
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running");
@@ -356,6 +380,11 @@ function resetPelanggaranManual() {
   } else {
     alert("❌ Otorisasi Gagal! PIN Salah.");
   }
+}
+
+// Memicu pemuatan daftar suara di beberapa browser HP Android agar tidak kosong saat dipanggil pertama kali
+if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.onvoiceschanged = window.speechSynthesis.getVoices;
 }
 </script>
 </body>
