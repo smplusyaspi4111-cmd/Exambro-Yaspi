@@ -33,39 +33,15 @@
     /* Tombol Navigasi Bawah */
     .btn-kembali { display: none; width: 100%; max-width: 150px; margin: 20px auto 0 auto; padding: 10px; background: #64748b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
     
-    /* 📱 AREA INTEGRASI GOOGLE FORM (IFRAME) */
-    #exam-wrapper { display: none; width: 100%; height: calc(100% - 70px); position: fixed; top: 0; left: 0; background: white; z-index: 999; }
+    /* 📱 AREA INTEGRASI GOOGLE FORM (IFRAME) FULL SCREEN */
+    #exam-wrapper { display: none; width: 100%; height: 100%; position: fixed; top: 0; left: 0; background: white; z-index: 999; }
     #exam-frame { width: 100%; height: 100%; border: none; }
     
-    /* 🚪 TOMBOL LOGOUT RESMI DI BAWAH FRAME */
-    .logout-bar { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; padding: 10px; text-align: center; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); z-index: 1000; }
-    .btn-logout { width: 100%; max-width: 320px; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
-
     /* Status Loading */
     #status-loading { color: #3b82f6; font-size: 14px; margin: 15px 0; font-weight: 500; }
-
-    /* 🚨 TIRAI MERAH PENGUNCI */
-    #blocker { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #b91c1c; color: white; z-index: 10000; padding: 15% 20px 0 20px; text-align: center; box-sizing: border-box; }
-    #blocker h1 { font-size: 32px; margin-bottom: 15px; font-weight: bold; }
-    #blocker p { font-size: 15px; margin-bottom: 5px; color: #fecaca; }
-    .btn-unlock { margin-top: 25px; padding: 12px 35px; background: white; color: #b91c1c; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); width: 100%; max-width: 320px; }
-    
-    .btn-reset-opsional { display: none; margin-top: 40px; background: transparent; color: #fca5a5; border: 1px dashed #fca5a5; padding: 6px 12px; border-radius: 4px; font-size: 11px; cursor: pointer; text-decoration: none; opacity: 0.7; margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body>
-
-<div id="blocker">
-  <h1>⚠️ AKURASI UJIAN TERKUNCI</h1>
-  <p>Terdeteksi keluar dari Google Form ujian untuk membuka aplikasi lain!</p>
-  <p style="font-weight: bold; background: rgba(0,0,0,0.2); display: inline-block; padding: 6px 15px; border-radius: 6px; margin-top: 15px;" id="lock-count">
-    Pelanggaran Ke: 0
-  </p>
-  <br>
-  <button class="btn-unlock" onclick="bukaKunciPengawas()">🔓 Buka Kunci<br><span id="info-pin-ke" style="font-size:11px; font-weight:normal; opacity:0.85;"></span></button>
-  <br>
-  <button id="tombol-reset-rahasia" class="btn-reset-opsional" onclick="resetPelanggaranManual()">⚙️ Pengawas: Reset Hitangan Ke 0</button>
-</div>
 
 <div class="container" id="main-portal">
   <img src="https://i.ibb.co.com/yFbhLfRF/Logo-Yaspi.png" alt="Logo YASPI" class="logo">
@@ -86,29 +62,21 @@
   <iframe id="exam-frame" src=""></iframe>
 </div>
 
-<div class="logout-bar" id="bar-logout-siswa">
-  <button class="btn-logout" onclick="logoutUjianSelesai()">🚪 SELESAI UJIAN & LOGOUT RESMI</button>
-</div>
-
 <script>
 const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1GmYzAoheln_djGbMDc0aFb9CxkugUbfbVkcliIfnxNc/edit";
 
 let databaseRoster = [];
-let databaseSandi = {};
-let countKeluar = parseInt(localStorage.getItem("yaspi_cheat_count")) || 0;
-let sudahBersuara = false; 
-let loopPengecekRadar = null; // Interval penilai kecurangan
-let radarSiapAktif = false; 
 
 window.onload = function() {
-  if (localStorage.getItem("yaspi_portal_locked") === "true") {
-    kunciPortalSiswa();
-  } else {
-    ambilDataSpreadsheet();
-    if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_current_link")) {
-      bukaIframeUjian(localStorage.getItem("yaspi_current_link"));
+  ambilDataSpreadsheet();
+  
+  // Deteksi jika murid menekan tombol kembali di browser/HP saat sedang ujian
+  window.addEventListener("popstate", function(event) {
+    if (localStorage.getItem("yaspi_ujian_running") === "true") {
+      localStorage.removeItem("yaspi_ujian_running");
+      location.reload(); // Refresh total balik ke halaman utama kelas
     }
-  }
+  });
 };
 
 function deteksiDanPisahKolom(barisTeks) {
@@ -127,24 +95,6 @@ function ambilDataSpreadsheet() {
   const base_url = SPREADSHEET_URL.split("/edit")[0];
   const penandaWaktu = new Date().getTime();
   const urlRoster = base_url + '/gviz/tq?tqx=out:csv&sheet=roster&cb=' + penandaWaktu;
-  const urlSandi = base_url + '/gviz/tq?tqx=out:csv&sheet=sandi&cb=' + penandaWaktu;
-
-  fetch(urlSandi)
-    .then(res => res.text())
-    .then(text => {
-      let baris = text.split(/\r?\n/);
-      databaseSandi = {}; 
-      for(let i = 1; i < baris.length; i++) {
-        let kolom = deteksiDanPisahKolom(baris[i]);
-        if(kolom.length >= 2) {
-          let noPel = kolom[0].replace(/"/g, '').trim();
-          let pin = kolom[1].replace(/"/g, '').trim().toUpperCase();
-          if(noPel) {
-            databaseSandi[noPel] = pin;
-          }
-        }
-      }
-    }).catch(err => console.log("Gagal memuat tab sandi"));
 
   fetch(urlRoster)
     .then(res => res.text())
@@ -246,9 +196,9 @@ function kembaliKeMenuUtama() {
 function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
   localStorage.setItem(kunciMemoriLokal, "true");
   localStorage.setItem("yaspi_ujian_running", "true");
-  localStorage.setItem("yaspi_current_link", linkGoogleForm);
-  sudahBersuara = false; 
-  radarSiapAktif = false; 
+  
+  // Manipulasi history browser agar ketika murid klik tombol kembali di HP, dia memicu event popstate
+  history.pushState({ujian: true}, "");
   
   bukaIframeUjian(linkGoogleForm);
 }
@@ -256,163 +206,7 @@ function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
 function bukaIframeUjian(urlForm) {
   document.getElementById("main-portal").style.display = "none";
   document.getElementById("exam-wrapper").style.display = "block";
-  document.getElementById("bar-logout-siswa").style.display = "block";
   document.getElementById("exam-frame").src = urlForm;
-
-  // ⏱️ JEDA AWAL 20 DETIK: Beri toleransi penuh saat murid login/isi identitas awal
-  setTimeout(function() {
-    radarSiapAktif = true;
-    jalankanPengecekOtomatis();
-  }, 20000);
-}
-
-function logoutUjianSelesai() {
-  let konfirmasi = confirm("Apakah Anda sudah benar-benar selesai mengirimkan jawaban di Google Form dan ingin keluar secara resmi?");
-  if (konfirmasi) {
-    matikanIntervalPengecek();
-    localStorage.removeItem("yaspi_ujian_running");
-    localStorage.removeItem("yaspi_current_link");
-    alert("Logout Berhasil! Terima kasih sudah mengikuti ujian dengan jujur di YASPI.");
-    location.reload(); 
-  }
-}
-
-// 🔥 STRATEGI BARU: Cek berkala apakah browser murni ditutup/dikecilkan
-function jalankanPengecekOtomatis() {
-  matikanIntervalPengecek();
-
-  loopPengecekRadar = setInterval(function() {
-    if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_portal_locked") !== "true" && radarSiapAktif === true) {
-      
-      // Jika dokumen tersembunyi TOTAL (pencet Home/pindah apps)
-      if (document.hidden) {
-        // Beri toleransi 3 detik untuk memastikan mereka benar-benar kabur, bukan lag sekejap
-        setTimeout(function() {
-          if (document.hidden) {
-            eksekusiKunciKecurangan();
-          }
-        }, 3000);
-      }
-    }
-  }, 2000); // Sensor berpatroli setiap 2 detik
-}
-
-function matikanIntervalPengecek() {
-  if (loopPengecekRadar) {
-    clearInterval(loopPengecekRadar);
-    loopPengecekRadar = null;
-  }
-}
-
-function eksekusiKunciKecurangan() {
-  countKeluar++;
-  localStorage.setItem("yaspi_cheat_count", countKeluar);
-  kunciPortalSiswa();
-}
-
-function kunciPortalSiswa() {
-  localStorage.setItem("yaspi_portal_locked", "true");
-  radarSiapAktif = false;
-  matikanIntervalPengecek();
-  
-  document.getElementById("exam-frame").src = "";
-  document.getElementById("exam-wrapper").style.display = "none";
-  document.getElementById("bar-logout-siswa").style.display = "none";
-  document.getElementById("main-portal").style.display = "none";
-  
-  document.getElementById("blocker").style.display = "block";
-  document.getElementById("lock-count").innerText = "Pelanggaran Ke: " + countKeluar;
-  
-  let targetSandiKolom = countKeluar;
-  if (targetSandiKolom > 5) targetSandiKolom = 5;
-  
-  document.getElementById("info-pin-ke").innerText = "(Gunakan PIN Pengawas Untuk Baris Ke-" + targetSandiKolom + ")";
-  
-  if (countKeluar >= 5) {
-    document.getElementById("tombol-reset-rahasia").style.display = "inline-block";
-  } else {
-    document.getElementById("tombol-reset-rahasia").style.display = "none";
-  }
-
-  if (!sudahBersuara) {
-    let teksMerepet = "bu Putriii ada yg mau nyonteeek. bu Putriii ada yg mau nyonteeek. bu Putriii ada yg mau nyonteeek.";
-    let ucapan = new SpeechSynthesisUtterance(teksMerepet);
-    
-    ucapan.lang = "id-ID"; 
-    ucapan.rate = 1.35;    
-    ucapan.pitch = 1.6;    
-
-    if (typeof speechSynthesis !== 'undefined' && window.speechSynthesis.getVoices) {
-      let daftarSuara = window.speechSynthesis.getVoices();
-      let suaraPerempuanId = daftarSuara.find(v => v.lang.includes("id") && (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("perempuan") || v.name.toLowerCase().includes("zira") || v.name.toLowerCase().includes("indonesia")));
-      if (suaraPerempuanId) {
-        ucapan.voice = suaraPerempuanId;
-      }
-    }
-
-    window.speechSynthesis.speak(ucapan);
-    sudahBersuara = true;  
-  }
-  
-  ambilDataSpreadsheet();
-}
-
-function bukaKunciPengawas() {
-  let targetSandiKolom = countKeluar;
-  if (targetSandiKolom > 5) targetSandiKolom = 5;
-
-  let inputPin = prompt("🚨 VERIFIKASI PENGAWAS\nMasukkan PIN Pengawas untuk Baris Ke-" + targetSandiKolom + ":");
-  if (inputPin === null) return;
-
-  let pinBersih = inputPin.trim().toUpperCase();
-  let pinTargetSah = databaseSandi[targetSandiKolom.toString()];
-
-  if (pinTargetSah && pinBersih === pinTargetSah) {
-    localStorage.removeItem("yaspi_portal_locked");
-    localStorage.removeItem("yaspi_ujian_running"); 
-    localStorage.removeItem("yaspi_current_link");
-    sudahBersuara = false;
-    radarSiapAktif = false;
-    matikanIntervalPengecek();
-    
-    document.getElementById("blocker").style.display = "none";
-    document.getElementById("main-portal").style.display = "block";
-    
-    alert("Akses dibuka kembali!");
-    location.reload();
-  } else {
-    alert("❌ PIN SALAH atau data internet belum termuat! Sila ketuk ulang.");
-  }
-}
-
-function resetPelanggaranManual() {
-  let pinSatu = databaseSandi["1"];
-  if (!pinSatu) {
-    alert("Sistem sedang mengunduh data spreadsheet, tunggu 3 detik lalu coba lagi.");
-    return;
-  }
-  
-  let konfirmasi = prompt("⚙️ RESET RIWAYAT PERANGKAT\nMasukkan PIN Ke-1 jika ingin mengosongkan riwayat pelanggaran HP ini murni ke awal:");
-  if (konfirmasi === null) return;
-  
-  if (konfirmasi.trim().toUpperCase() === pinSatu) {
-    countKeluar = 0;
-    sudahBersuara = false;
-    radarSiapAktif = false;
-    matikanIntervalPengecek();
-    localStorage.removeItem("yaspi_cheat_count");
-    localStorage.removeItem("yaspi_portal_locked");
-    localStorage.removeItem("yaspi_ujian_running");
-    localStorage.removeItem("yaspi_current_link");
-    alert("🔄 Sukses! Seluruh riwayat pelanggaran HP ini telah dibersihkan murni ke 0.");
-    location.reload();
-  } else {
-    alert("❌ Otorisasi Gagal! PIN Salah.");
-  }
-}
-
-if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-  speechSynthesis.onvoiceschanged = window.speechSynthesis.getVoices;
 }
 </script>
 </body>
