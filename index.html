@@ -6,8 +6,9 @@
   <title>PORTAL UJIAN DIGITAL YASPI</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; color: #1e293b; padding: 15px; }
-    .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; }
+    body, html { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; color: #1e293b; height: 100%; overflow-x: hidden; }
+    
+    .container { max-width: 600px; margin: 15px auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; }
     img.logo { width: 70px; height: auto; margin-bottom: 10px; }
     h2 { color: #1e3a8a; font-size: 20px; text-transform: uppercase; margin-bottom: 5px; }
     .sub-title { font-size: 13px; color: #64748b; margin-bottom: 20px; }
@@ -32,8 +33,13 @@
     /* Tombol Navigasi Bawah */
     .btn-kembali { display: none; width: 100%; max-width: 150px; margin: 20px auto 0 auto; padding: 10px; background: #64748b; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 13px; cursor: pointer; }
     
-    /* 🚪 TOMBOL LOGOUT AMAN */
-    .btn-logout { display: none; width: 100%; max-width: 250px; margin: 25px auto 0 auto; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
+    /* 📱 AREA INTEGRASI GOOGLE FORM (IFRAME) */
+    #exam-wrapper { display: none; width: 100%; height: calc(100% - 70px); position: fixed; top: 0; left: 0; background: white; z-index: 999; }
+    #exam-frame { width: 100%; height: 100%; border: none; }
+    
+    /* 🚪 TOMBOL LOGOUT RESMI DI BAWAH FRAME */
+    .logout-bar { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; padding: 10px; text-align: center; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); z-index: 1000; }
+    .btn-logout { width: 100%; max-width: 320px; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
 
     /* Status Loading */
     #status-loading { color: #3b82f6; font-size: 14px; margin: 15px 0; font-weight: 500; }
@@ -72,12 +78,16 @@
   </div>
 
   <div id="status-loading">Memuat data ujian dari Google Sheets...</div>
-
   <div id="roster-container"></div>
-  
-  <button class="btn-logout" id="btn-logout-resmi" onclick="logoutUjianSelesai()">🚪 SELESAI UJIAN & LOGOUT</button>
-  
   <button class="btn-kembali" id="btn-back-main" onclick="kembaliKeMenuUtama()">⬅️ KEMBALI</button>
+</div>
+
+<div id="exam-wrapper">
+  <iframe id="exam-frame" src=""></iframe>
+</div>
+
+<div class="logout-bar" id="bar-logout-siswa">
+  <button class="btn-logout" onclick="logoutUjianSelesai()">🚪 SELESAI UJIAN & LOGOUT RESMI</button>
 </div>
 
 <script>
@@ -94,7 +104,10 @@ window.onload = function() {
     kunciPortalSiswa();
   } else {
     ambilDataSpreadsheet();
-    aturVisibilitasTombolLogout();
+    // Cek jika siswa menyegarkan halaman di tengah-tengah ujian berjalan
+    if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_current_link")) {
+      bukaIframeUjian(localStorage.getItem("yaspi_current_link"));
+    }
   }
 };
 
@@ -222,44 +235,41 @@ function pilihKelas(targetKelas, elemen) {
   }
 
   document.getElementById("btn-back-main").style.display = "block";
-  aturVisibilitasTombolLogout();
 }
 
 function kembaliKeMenuUtama() {
   document.getElementById("roster-container").innerHTML = "";
   document.querySelectorAll('.btn-kelas').forEach(btn => btn.classList.remove('active'));
   document.getElementById("btn-back-main").style.display = "none";
-  aturVisibilitasTombolLogout();
 }
 
 function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
-  // 🔥 AMAN 100%: Kunci status di memori HP DULUAN, baru pindah halaman di tab yang sama (_self)
   localStorage.setItem(kunciMemoriLokal, "true");
   localStorage.setItem("yaspi_ujian_running", "true");
+  localStorage.setItem("yaspi_current_link", linkGoogleForm);
   sudahBersuara = false; 
   
-  window.location.href = linkGoogleForm;
+  bukaIframeUjian(linkGoogleForm);
 }
 
-function aturVisibilitasTombolLogout() {
-  const tombolLogout = document.getElementById("btn-logout-resmi");
-  if (localStorage.getItem("yaspi_ujian_running") === "true") {
-    tombolLogout.style.display = "block";
-  } else {
-    tombolLogout.style.display = "none";
-  }
+function bukaIframeUjian(urlForm) {
+  document.getElementById("main-portal").style.display = "none";
+  document.getElementById("exam-wrapper").style.display = "block";
+  document.getElementById("bar-logout-siswa").style.display = "block";
+  document.getElementById("exam-frame").src = urlForm;
 }
 
 function logoutUjianSelesai() {
   let konfirmasi = confirm("Apakah Anda sudah benar-benar selesai mengirimkan jawaban di Google Form dan ingin keluar secara resmi?");
   if (konfirmasi) {
     localStorage.removeItem("yaspi_ujian_running");
-    alert("Logout Berhasil! Terima kasih sudah mengikuti ujian dengan jujur di YASPI. Silakan beristirahat.");
+    localStorage.removeItem("yaspi_current_link");
+    alert("Logout Berhasil! Terima kasih sudah mengikuti ujian dengan jujur di YASPI.");
     location.reload(); 
   }
 }
 
-// 🚨 RADAR UTAMA UNTUK HP: Mendeteksi jika murid sempat kabur keluar browser saat ujian berjalan
+// 🚨 RADAR ANTI-CONTEK AKTIF 100% KARENA HALAMAN PORTAL TETAP STANDBY
 function cekKecuranganSiswa() {
   if (localStorage.getItem("yaspi_ujian_running") === "true" && localStorage.getItem("yaspi_portal_locked") !== "true") {
     if (document.hidden || !document.hasFocus()) {
@@ -269,7 +279,7 @@ function cekKecuranganSiswa() {
           localStorage.setItem("yaspi_cheat_count", countKeluar);
           kunciPortalSiswa();
           timerPelanggaran = null;
-        }, 3000); // Toleransi kabur maksimal 3 detik
+        }, 3000); 
       }
     }
   }
@@ -282,7 +292,6 @@ function batalkanTimer() {
   }
 }
 
-// Pasang mata-mata di segala aktivitas perpindahan layar HP
 document.addEventListener("visibilitychange", function() {
   if (document.hidden) {
     cekKecuranganSiswa();
@@ -296,6 +305,9 @@ window.addEventListener("focus", batalkanTimer);
 function kunciPortalSiswa() {
   localStorage.setItem("yaspi_portal_locked", "true");
   document.getElementById("main-portal").style.display = "none";
+  document.getElementById("exam-wrapper").style.display = "none";
+  document.getElementById("bar-logout-siswa").style.display = "none";
+  
   document.getElementById("blocker").style.display = "block";
   document.getElementById("lock-count").innerText = "Pelanggaran Ke: " + countKeluar;
   
@@ -346,6 +358,7 @@ function bukaKunciPengawas() {
   if (pinTargetSah && pinBersih === pinTargetSah) {
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running"); 
+    localStorage.removeItem("yaspi_current_link");
     sudahBersuara = false;
     batalkanTimer();
     
@@ -376,6 +389,7 @@ function resetPelanggaranManual() {
     localStorage.removeItem("yaspi_cheat_count");
     localStorage.removeItem("yaspi_portal_locked");
     localStorage.removeItem("yaspi_ujian_running");
+    localStorage.removeItem("yaspi_current_link");
     alert("🔄 Sukses! Seluruh riwayat pelanggaran HP ini telah dibersihkan murni ke 0.");
     location.reload();
   } else {
