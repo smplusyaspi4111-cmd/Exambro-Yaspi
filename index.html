@@ -236,9 +236,9 @@ function mulaiUjian(linkGoogleForm, kunciMemoriLokal) {
   localStorage.setItem(kunciMemoriLokal, "true");
   localStorage.setItem("yaspi_ujian_running", "true");
   sudahBersuara = false; 
-  window.open(linkGoogleForm, '_blank');
   
-  setTimeout(() => { location.reload(); }, 500);
+  // 🛠️ FIX UTAMA: Buka di jendela murni halaman yang sama (_self) agar browser tidak bingung kehilangan fokus tab
+  window.open(linkGoogleForm, '_self');
 }
 
 function aturVisibilitasTombolLogout() {
@@ -309,17 +309,14 @@ function kunciPortalSiswa() {
     document.getElementById("tombol-reset-rahasia").style.display = "none";
   }
 
-  // 🔊 UPDATE ALARM SUARA PEREMPUAN: Memanggil Bu Putri!
   if (!sudahBersuara) {
-    // Kata-kata pesanan khusus dari Fiam
     let teksMerepet = "bu Putriii ada yg mau nyonteeek. bu Putriii ada yg mau nyonteeek. bu Putriii ada yg mau nyonteeek.";
     let ucapan = new SpeechSynthesisUtterance(teksMerepet);
     
     ucapan.lang = "id-ID"; 
-    ucapan.rate = 1.35;    // Kecepatan dipercepat biar merepet panik
-    ucapan.pitch = 1.6;    // Nada dinaikkan tinggi agar dipaksa menjadi lengkingan wanita cempreng
+    ucapan.rate = 1.35;    
+    ucapan.pitch = 1.6;    
 
-    // Paksa sistem Android mencari database suara wanita Indonesia
     if (typeof speechSynthesis !== 'undefined' && window.speechSynthesis.getVoices) {
       let daftarSuara = window.speechSynthesis.getVoices();
       let suaraPerempuanId = daftarSuara.find(v => v.lang.includes("id") && (v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("perempuan") || v.name.toLowerCase().includes("zira") || v.name.toLowerCase().includes("indonesia")));
@@ -385,7 +382,6 @@ function resetPelanggaranManual() {
   }
 }
 
-// Mengaktifkan pemicu suara di latar belakang Android
 if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
   speechSynthesis.onvoiceschanged = window.speechSynthesis.getVoices;
 }
